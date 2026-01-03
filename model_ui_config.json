@@ -1,0 +1,214 @@
+{
+    "model_threshold": 0.7623916864395142,
+    "input_fields": [
+        {
+            "name": "Financial Stress",
+            "label": "Financial Stress",
+            "type": "select",
+            "options": [
+                "1.0",
+                "2.0",
+                "3.0",
+                "4.0",
+                "5.0"
+            ]
+        },
+        {
+            "name": "Work Pressure",
+            "label": "Work Pressure",
+            "type": "select",
+            "options": [
+                "1.0",
+                "2.0",
+                "3.0",
+                "4.0",
+                "5.0"
+            ]
+        },
+        {
+            "name": "Work/Study Hours",
+            "label": "Work/Study Hours",
+            "type": "number",
+            "min": 0.0,
+            "max": 12.0
+        },
+        {
+            "name": "Academic Pressure",
+            "label": "Academic Pressure",
+            "type": "select",
+            "options": [
+                "1.0",
+                "2.0",
+                "3.0",
+                "4.0",
+                "5.0"
+            ]
+        },
+        {
+            "name": "Family History of Mental Illness",
+            "label": "Family History Of Mental Illness",
+            "type": "select",
+            "options": [
+                "No",
+                "Yes"
+            ]
+        },
+        {
+            "name": "Profession",
+            "label": "Profession",
+            "type": "select",
+            "options": [
+                "Accountant",
+                "Architect",
+                "Business Analyst",
+                "Chef",
+                "Chemist",
+                "Civil Engineer",
+                "Consultant",
+                "Content Writer",
+                "Customer Support",
+                "Data Scientist",
+                "Digital Marketer",
+                "Doctor",
+                "Educational Consultant",
+                "Electrician",
+                "Entrepreneur",
+                "Finanancial Analyst",
+                "Financial Analyst",
+                "Graphic Designer",
+                "HR Manager",
+                "Investment Banker",
+                "Judge",
+                "Lawyer",
+                "Manager",
+                "Marketing Manager",
+                "Mechanical Engineer",
+                "Pharmacist",
+                "Pilot",
+                "Plumber",
+                "Research Analyst",
+                "Researcher",
+                "Sales Executive",
+                "Software Engineer",
+                "Student",
+                "Teacher",
+                "Travel Consultant",
+                "UX/UI Designer",
+                "Other"
+            ]
+        },
+        {
+            "name": "Sleep Duration",
+            "label": "Sleep Duration",
+            "type": "select",
+            "options": [
+                "4-5 hours",
+                "5-6 hours",
+                "6-8 hours",
+                "Less than 4 hours",
+                "More than 8 hours"
+            ]
+        },
+        {
+            "name": "Dietary Habits",
+            "label": "Dietary Habits",
+            "type": "select",
+            "options": [
+                "Healthy",
+                "Moderate",
+                "Unhealthy"
+            ]
+        },
+        {
+            "name": "Gender",
+            "label": "Gender",
+            "type": "select",
+            "options": [
+                "Female",
+                "Male"
+            ]
+        },
+        {
+            "name": "Degree",
+            "label": "Degree",
+            "type": "select",
+            "options": [
+                "B.Arch",
+                "B.Com",
+                "B.Ed",
+                "B.Pharm",
+                "B.Tech",
+                "BA",
+                "BBA",
+                "BCA",
+                "BE",
+                "BHM",
+                "BSc",
+                "Class 12",
+                "LLB",
+                "LLM",
+                "M.Com",
+                "M.Ed",
+                "M.Pharm",
+                "M.Tech",
+                "MA",
+                "MBA",
+                "MBBS",
+                "MCA",
+                "MD",
+                "ME",
+                "MHM",
+                "MSc",
+                "PhD",
+                "Other"
+            ]
+        },
+        {
+            "name": "CGPA",
+            "label": "Cgpa",
+            "type": "number",
+            "min": 5.03,
+            "max": 10.0
+        },
+        {
+            "name": "Age",
+            "label": "Age",
+            "type": "number",
+            "min": 18.0,
+            "max": 60.0
+        },
+        {
+            "name": "Study Satisfaction",
+            "label": "Study Satisfaction",
+            "type": "select",
+            "options": [
+                "1.0",
+                "2.0",
+                "3.0",
+                "4.0",
+                "5.0"
+            ]
+        },
+        {
+            "name": "Have you ever had suicidal thoughts ?",
+            "label": "Have You Ever Had Suicidal Thoughts ?",
+            "type": "select",
+            "options": [
+                "No",
+                "Yes"
+            ]
+        },
+        {
+            "name": "Job Satisfaction",
+            "label": "Job Satisfaction",
+            "type": "select",
+            "options": [
+                "1.0",
+                "2.0",
+                "3.0",
+                "4.0",
+                "5.0"
+            ]
+        }
+    ]
+}

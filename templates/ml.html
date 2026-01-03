@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Prediction | Mental Health Analytics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        select {
+            appearance: none; 
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2364748b%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 0.65em auto;
+        }
+    </style>
+</head>
+<body>
+    <nav class="bg-white border-b border-slate-200 fixed w-full z-50 top-0 px-6 py-4 shadow-sm">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <a href="/" class="flex items-center gap-3 group">
+                <div class="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform"><i class="fas fa-brain"></i></div>
+                <span class="text-xl font-bold text-slate-800 tracking-tight">Mental Health Analytics</span>
+            </a>
+            <div class="hidden md:flex gap-8 text-sm font-semibold text-slate-500">
+                <a href="/" class="hover:text-blue-600 transition-colors">Home</a>
+                <a href="/dashboard" class="hover:text-blue-600 transition-colors">Dashboard</a>
+                <a href="/ml" class="text-blue-600 bg-blue-50 px-3 py-1 rounded-full">AI Predict</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="pt-32 pb-20 px-4">
+        <div class="max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden">
+            
+            <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-10 text-center relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+                    <i class="fas fa-network-wired absolute top-4 left-4 text-6xl text-white"></i>
+                    <i class="fas fa-microchip absolute bottom-4 right-4 text-8xl text-white"></i>
+                </div>
+                <h1 class="text-3xl md:text-4xl font-black text-white mb-3 relative z-10">Depression Risk Prediction</h1>
+                <p class="text-slate-400 text-sm md:text-base max-w-lg mx-auto relative z-10">
+                    The system automatically generates the most important input fields based on the trained AI model. Please fill in the details below.
+                </p>
+            </div>
+
+            <form id="predictForm" class="p-8 md:p-12 space-y-8 relative min-h-[300px]">
+                
+                <div id="formLoading" class="absolute inset-0 flex flex-col items-center justify-center bg-white z-10">
+                    <i class="fas fa-circle-notch fa-spin text-4xl text-blue-600 mb-4"></i>
+                    <p class="text-slate-500 font-medium">Loading Model Configuration...</p>
+                </div>
+
+                <div id="generalSection" class="hidden fade-in">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase border-b pb-2 mb-4">
+                        <i class="fas fa-user-circle mr-1"></i> General Information
+                    </h3>
+                    <div id="generalGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        </div>
+                </div>
+
+                <div id="roleToggleSection" class="hidden bg-blue-50 p-6 rounded-2xl border border-blue-100 mt-8 text-center fade-in">
+                    <label class="block text-base font-bold text-blue-900 mb-3">What is your current status?</label>
+                    <div class="max-w-sm mx-auto">
+                        <select id="statusSelect" name="Working Professional or Student" class="w-full bg-white border border-blue-300 text-blue-900 font-bold rounded-xl p-4 text-center outline-none shadow-sm focus:ring-2 focus:ring-blue-500 transition-all text-lg cursor-pointer hover:border-blue-500" onchange="handleRoleChange()">
+                            <option value="" disabled selected>-- Select Role --</option>
+                            <option value="Student">👨‍🎓 Student</option>
+                            <option value="Working Professional">💼 Working Professional</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="studentSection" class="hidden bg-indigo-50 p-6 rounded-2xl border border-indigo-100 fade-in mt-6">
+                    <h4 class="text-sm font-bold text-indigo-700 mb-4 uppercase flex items-center gap-2">
+                        <i class="fas fa-graduation-cap text-xl"></i> Student Details
+                    </h4>
+                    <div id="studentGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        </div>
+                </div>
+
+                <div id="proSection" class="hidden bg-emerald-50 p-6 rounded-2xl border border-emerald-100 fade-in mt-6">
+                    <h4 class="text-sm font-bold text-emerald-700 mb-4 uppercase flex items-center gap-2">
+                        <i class="fas fa-briefcase text-xl"></i> Professional Details
+                    </h4>
+                    <div id="proGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        </div>
+                </div>
+
+                <div id="submitBtnContainer" class="hidden pt-4 fade-in">
+                    <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-lg font-bold py-5 rounded-2xl shadow-xl shadow-blue-200 transform hover:scale-[1.01] transition-all flex justify-center items-center gap-3">
+                        <i class="fas fa-magic"></i> Run Prediction
+                    </button>
+                </div>
+            </form>
+
+            <div id="resultArea" class="hidden bg-slate-50 border-t border-slate-200 p-10 text-center fade-in">
+                <div id="resultContainer" class="max-w-xl mx-auto bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+                    <div id="resultIcon" class="text-6xl mb-4 transition-transform duration-500 hover:scale-110 inline-block"></div>
+                    <h2 id="resultTitle" class="text-3xl font-black mb-3"></h2>
+                    <p id="resultDesc" class="text-slate-600 mb-8 leading-relaxed"></p>
+                    
+                    <div class="flex justify-center">
+                        <div class="bg-slate-50 p-6 rounded-2xl border border-slate-100 min-w-[250px]">
+                            <p class="text-xs uppercase font-bold text-slate-400 mb-2">Probability of Depression</p>
+                            <p id="probVal" class="text-4xl font-black text-blue-600">--%</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. CONFIGURATION ---
+        const SCALE_LABELS = { 1: "1 - Very Low", 2: "2 - Low", 3: "3 - Moderate", 4: "4 - High", 5: "5 - Very High" };
+        const FINANCE_LABELS = { 1: "1 - Secure", 2: "2 - Minor", 3: "3 - Moderate", 4: "4 - High", 5: "5 - Critical" };
+        
+        const STUDENT_VARS = ['CGPA', 'Degree', 'Academic Pressure', 'Study Satisfaction'];
+        const PRO_VARS = ['Profession', 'Work Pressure', 'Job Satisfaction'];
+        const SCALE_KEYWORDS = ['Pressure', 'Satisfaction', 'Stress'];
+
+        // --- 2. LOAD CONFIG ---
+        async function loadFormConfig() {
+            try {
+                const response = await fetch('/api/model-config');
+                if (!response.ok) throw new Error("Failed to load config");
+                const config = await response.json();
+                renderForm(config.input_fields);
+                
+                document.getElementById('formLoading').classList.add('hidden');
+                document.getElementById('generalSection').classList.remove('hidden');
+                document.getElementById('roleToggleSection').classList.remove('hidden');
+                
+            } catch (err) {
+                document.getElementById('formLoading').innerHTML = `<p class="text-red-500 font-bold">Backend Connection Error (app.py)</p>`;
+                console.error(err);
+            }
+        }
+
+        // --- 3. RENDER FORM ---
+        function renderForm(fields) {
+            const generalGrid = document.getElementById('generalGrid');
+            const studentGrid = document.getElementById('studentGrid');
+            const proGrid = document.getElementById('proGrid');
+
+            fields.forEach(field => {
+                if (field.name === "Working Professional or Student") return;
+
+                let container = generalGrid;
+                
+                if (STUDENT_VARS.some(v => field.name.includes(v))) {
+                    container = studentGrid;
+                } else if (PRO_VARS.some(v => field.name.includes(v))) {
+                    container = proGrid;
+                }
+
+                container.insertAdjacentHTML('beforeend', createFieldHTML(field));
+            });
+        }
+
+        // --- 4. GENERATE HTML FOR FIELD ---
+        function createFieldHTML(field) {
+            let inputHtml = '';
+            const isScale = SCALE_KEYWORDS.some(k => field.name.includes(k));
+
+            if (isScale) {
+                let labelMap = field.name.includes('Financial') ? FINANCE_LABELS : SCALE_LABELS;
+                let opts = `<option value="" disabled selected>-- Select Level --</option>`;
+                for(let i=1; i<=5; i++) opts += `<option value="${i}">${labelMap[i]}</option>`;
+                inputHtml = `<select name="${field.name}" class="w-full p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-white" required>${opts}</select>`;
+            } 
+            else if (field.type === 'select') {
+                let opts = `<option value="" disabled selected>-- Select --</option>`;
+                if (field.options) field.options.forEach(o => opts += `<option value="${o}">${o}</option>`);
+                inputHtml = `<select name="${field.name}" class="w-full p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-white" required>${opts}</select>`;
+            } else {
+                const step = field.name.includes('CGPA') ? '0.01' : '1';
+                inputHtml = `<input type="number" name="${field.name}" min="${field.min}" max="${field.max}" step="${step}" class="w-full p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all" required placeholder="${field.min} - ${field.max}">`;
+            }
+            return `<div class="fade-in"><label class="block text-xs font-bold text-slate-500 mb-1 uppercase">${field.label}</label>${inputHtml}</div>`;
+        }
+
+        // --- 5. HANDLE ROLE CHANGE ---
+        function handleRoleChange() {
+            const status = document.getElementById('statusSelect').value;
+            const stuSec = document.getElementById('studentSection');
+            const proSec = document.getElementById('proSection');
+            const btnContainer = document.getElementById('submitBtnContainer');
+            
+            const stuInputs = stuSec.querySelectorAll('input, select');
+            const proInputs = proSec.querySelectorAll('input, select');
+
+            if (status === 'Student') {
+                stuSec.classList.remove('hidden');
+                proSec.classList.add('hidden');
+                btnContainer.classList.remove('hidden');
+                
+                stuInputs.forEach(e => e.required = true);
+                proInputs.forEach(e => e.required = false);
+                
+            } else if (status === 'Working Professional') {
+                stuSec.classList.add('hidden');
+                proSec.classList.remove('hidden');
+                btnContainer.classList.remove('hidden');
+                
+                stuInputs.forEach(e => e.required = false);
+                proInputs.forEach(e => e.required = true);
+            }
+        }
+
+        // --- 6. SUBMIT FORM ---
+        document.getElementById('predictForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = this.querySelector('button');
+            const oldText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...'; btn.disabled = true;
+
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData.entries());
+            
+            const statusSelect = document.getElementById('statusSelect');
+            if(statusSelect && !data['Working Professional or Student']) {
+                data['Working Professional or Student'] = statusSelect.value;
+            }
+
+            try {
+                const res = await fetch('/api/predict', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if(result.error) throw new Error(result.error);
+
+                const area = document.getElementById('resultArea');
+                const title = document.getElementById('resultTitle');
+                const icon = document.getElementById('resultIcon');
+                const desc = document.getElementById('resultDesc');
+                
+                area.classList.remove('hidden');
+                document.getElementById('probVal').innerText = result.probability + '%';
+                
+                title.innerText = result.risk_level;
+                desc.innerText = result.recommendation;
+
+                // --- UPDATE LOGIC MÀU SẮC (KHỚP VỚI PYTHON) ---
+                // 1. Critical (>= Threshold)
+                // 2. Warning (0.6 - Threshold)
+                // 3. Moderate (0.4 - 0.6)
+                // 4. Normal (< 0.4)
+                
+                const prob = parseFloat(result.probability); 
+                const threshold = parseFloat(result.threshold) * 100;
+                
+                if (prob >= threshold) {
+                    // Critical
+                    title.className = "text-3xl font-black mb-3 text-rose-600";
+                    icon.innerHTML = '<i class="fas fa-radiation text-rose-500"></i>';
+                    document.getElementById('probVal').className = "text-4xl font-black text-rose-600";
+                } else if (prob >= 60) {
+                    // Warning (0.6 - Threshold)
+                    title.className = "text-3xl font-black mb-3 text-orange-600";
+                    icon.innerHTML = '<i class="fas fa-exclamation-triangle text-orange-500"></i>';
+                    document.getElementById('probVal').className = "text-4xl font-black text-orange-600";
+                } else if (prob >= 40) {
+                    // Moderate (0.4 - 0.6)
+                    title.className = "text-3xl font-black mb-3 text-yellow-600";
+                    icon.innerHTML = '<i class="fas fa-exclamation-circle text-yellow-500"></i>';
+                    document.getElementById('probVal').className = "text-4xl font-black text-yellow-600";
+                } else {
+                    // Normal (< 0.4)
+                    title.className = "text-3xl font-black mb-3 text-emerald-600";
+                    icon.innerHTML = '<i class="fas fa-shield-heart text-emerald-500"></i>';
+                    document.getElementById('probVal').className = "text-4xl font-black text-emerald-600";
+                }
+                
+                area.scrollIntoView({behavior: 'smooth', block: 'start'});
+
+            } catch (err) { alert('Error: ' + err.message); } 
+            finally { btn.innerHTML = oldText; btn.disabled = false; }
+        });
+
+        document.addEventListener('DOMContentLoaded', loadFormConfig);
+    </script>
+</body>
+</html>

@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mental Health Analytics Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@2.3.0/dist/chartjs-chart-treemap.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Roboto', sans-serif; background-color: #f8fafc; color: #1e293b; display: flex; }
+        .sidebar { width: 320px; height: 100vh; position: fixed; left: 0; top: 0; background: white; border-right: 1px solid #e2e8f0; padding: 24px; z-index: 100; overflow-y: auto; }
+        .main-content { margin-left: 320px; width: calc(100% - 320px); padding: 32px; }
+        .filter-group { margin-bottom: 20px; }
+        .filter-label { display: block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+        .filter-control { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; font-size: 14px; color: #334155; outline: none; background-color: #fff; transition: all 0.2s; }
+        .filter-control:focus { border-color: #2563eb; ring: 2px solid #dbeafe; }
+        
+        .checkbox-list { max-height: 160px; overflow-y: auto; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; background: #fdfdfd; }
+        .checkbox-item { display: flex; align-items: center; gap: 10px; font-size: 13px; padding: 3px 0; cursor: pointer; }
+        .checkbox-item input { width: 16px; height: 16px; cursor: pointer; accent-color: #2563eb; }
+
+        .card { background: #ffffff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; height: 380px; display: flex; flex-direction: column; transition: transform 0.2s; }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .kpi-card { background: #ffffff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 5px solid #3b82f6; display: flex; align-items: center; justify-content: space-between; }
+        .chart-box { flex-grow: 1; position: relative; width: 100%; min-height: 0; }
+        .card-title { font-weight: 700; color: #334155; font-size: 1rem; margin-bottom: 1rem; display: flex; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; }
+        .card-title i { margin-right: 0.75rem; color: #0284c7; }
+        .kpi-value { font-size: 1.8rem; font-weight: 800; color: #1e293b; }
+        .kpi-label { font-size: 0.85rem; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+        .kpi-icon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; opacity: 0.9; }
+        
+        .logo-link { display: flex; items-center; gap: 12px; transition: opacity 0.2s; margin-bottom: 32px; width: fit-content; }
+        .logo-link:hover { opacity: 0.8; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <a href="/" class="logo-link">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-md">
+                    <i class="fas fa-brain text-xl"></i>
+                </div>
+                <span class="text-xl font-bold text-slate-800 uppercase tracking-tight">Mind<span class="text-blue-600">AI</span></span>
+            </div>
+        </a>
+
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Data Filters</h3>
+
+        <div class="filter-group">
+            <label class="filter-label">Status</label>
+            <select id="fStatus" class="filter-control">
+                <option value="">All</option>
+                <option value="Student">Student</option>
+                <option value="Working Professional">Working Professional</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label">Gender</label>
+            <select id="fGender" class="filter-control">
+                <option value="">All</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label">Age Range</label>
+            <div class="flex items-center gap-2">
+                <input type="number" id="fAgeMin" min="18" max="60" value="18" class="filter-control text-center">
+                <span class="text-slate-400">-</span>
+                <input type="number" id="fAgeMax" min="18" max="60" value="60" class="filter-control text-center">
+            </div>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label">Degree (Select Multiple)</label>
+            <div class="checkbox-list" id="fDegreeList">
+                <label class="checkbox-item"><input type="checkbox" value="B.Com"> B.Com</label>
+                <label class="checkbox-item"><input type="checkbox" value="B.Sc"> B.Sc</label>
+                <label class="checkbox-item"><input type="checkbox" value="B.Tech"> B.Tech</label>
+                <label class="checkbox-item"><input type="checkbox" value="B.A"> B.A</label>
+                <label class="checkbox-item"><input type="checkbox" value="BCA"> BCA</label>
+                <label class="checkbox-item"><input type="checkbox" value="B.Ed"> B.Ed</label>
+                <label class="checkbox-item"><input type="checkbox" value="MBBS"> MBBS</label>
+                <label class="checkbox-item"><input type="checkbox" value="LLB"> LLB</label>
+                <label class="checkbox-item"><input type="checkbox" value="BE"> BE</label>
+                <label class="checkbox-item"><input type="checkbox" value="BBA"> BBA</label>
+                <label class="checkbox-item"><input type="checkbox" value="M.Com"> M.Com</label>
+                <label class="checkbox-item"><input type="checkbox" value="M.Sc"> M.Sc</label>
+                <label class="checkbox-item"><input type="checkbox" value="M.Tech"> M.Tech</label>
+                <label class="checkbox-item"><input type="checkbox" value="M.A"> M.A</label>
+                <label class="checkbox-item"><input type="checkbox" value="MCA"> MCA</label>
+                <label class="checkbox-item"><input type="checkbox" value="MBA"> MBA</label>
+                <label class="checkbox-item"><input type="checkbox" value="ME"> ME</label>
+                <label class="checkbox-item"><input type="checkbox" value="PhD"> PhD</label>
+                <label class="checkbox-item"><input type="checkbox" value="Others"> Others</label>
+            </div>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label">Profession (Select Multiple)</label>
+            <div class="checkbox-list" id="fProfessionList">
+                <label class="checkbox-item"><input type="checkbox" value="Software Engineer"> Software Engineer</label>
+                <label class="checkbox-item"><input type="checkbox" value="Doctor"> Doctor</label>
+                <label class="checkbox-item"><input type="checkbox" value="Teacher"> Teacher</label>
+                <label class="checkbox-item"><input type="checkbox" value="Engineer"> Engineer</label>
+                <label class="checkbox-item"><input type="checkbox" value="Accountant"> Accountant</label>
+                <label class="checkbox-item"><input type="checkbox" value="Manager"> Manager</label>
+                <label class="checkbox-item"><input type="checkbox" value="Banker"> Banker</label>
+                <label class="checkbox-item"><input type="checkbox" value="Lawyer"> Lawyer</label>
+                <label class="checkbox-item"><input type="checkbox" value="Business Person"> Business Person</label>
+                <label class="checkbox-item"><input type="checkbox" value="Consultant"> Consultant</label>
+                <label class="checkbox-item"><input type="checkbox" value="Researcher"> Researcher</label>
+                <label class="checkbox-item"><input type="checkbox" value="HR"> HR</label>
+                <label class="checkbox-item"><input type="checkbox" value="Marketing"> Marketing</label>
+                <label class="checkbox-item"><input type="checkbox" value="Sales"> Sales</label>
+                <label class="checkbox-item"><input type="checkbox" value="Civil Servant"> Civil Servant</label>
+                <label class="checkbox-item"><input type="checkbox" value="Pharmacist"> Pharmacist</label>
+                <label class="checkbox-item"><input type="checkbox" value="Chef"> Chef</label>
+                <label class="checkbox-item"><input type="checkbox" value="Architect"> Architect</label>
+                <label class="checkbox-item"><input type="checkbox" value="Designer"> Designer</label>
+                <label class="checkbox-item"><input type="checkbox" value="Freelancer"> Freelancer</label>
+                <label class="checkbox-item"><input type="checkbox" value="Unemployed"> Unemployed</label>
+            </div>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label">Family History</label>
+            <select id="fHistory" class="filter-control">
+                <option value="">All</option>
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label">Suicidal Thoughts</label>
+            <select id="fSuicide" class="filter-control">
+                <option value="">All</option>
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+            </select>
+        </div>
+
+        <select id="fDepression" style="display:none;"><option value=""></option></select>
+
+        <div class="mt-8 space-y-3">
+            <button onclick="init()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow-lg flex items-center justify-center gap-2">
+                <i class="fas fa-filter text-xs"></i> Apply Filter
+            </button>
+            <button onclick="resetFilters()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-lg transition">
+                Reset
+            </button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-slate-800">Mental Health Dashboard</h1>
+            <p class="text-slate-500">Data analysis based on 2024 survey</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+            <div class="kpi-card border-l-rose-500"><div><div class="kpi-label">Depression Rate</div><div class="kpi-value text-rose-600" id="kpiDepression">--%</div></div><div class="kpi-icon bg-rose-100 text-rose-600"><i class="fas fa-brain"></i></div></div>
+            <div class="kpi-card border-l-amber-500"><div><div class="kpi-label">Avg Pressure</div><div class="kpi-value text-amber-600" id="kpiPressure">--</div></div><div class="kpi-icon bg-amber-100 text-amber-600"><i class="fas fa-compress-arrows-alt"></i></div></div>
+            <div class="kpi-card border-l-emerald-500"><div><div class="kpi-label">Avg Satisfaction</div><div class="kpi-value text-emerald-600" id="kpiSatisfaction">--</div></div><div class="kpi-icon bg-emerald-100 text-emerald-600"><i class="fas fa-smile"></i></div></div>
+            <div class="kpi-card border-l-blue-500"><div><div class="kpi-label">Family History</div><div class="kpi-value text-blue-600" id="kpiFamilyHistory">--</div></div><div class="kpi-icon bg-blue-100 text-blue-600"><i class="fas fa-wallet"></i></div></div>
+            <div class="kpi-card border-l-gray-600"><div><div class="kpi-label">Suicidal Thoughts</div><div class="kpi-value text-gray-700" id="kpiSuicide">--</div></div><div class="kpi-icon bg-gray-200 text-gray-700"><i class="fas fa-heart-broken"></i></div></div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <div class="card"><h3 class="card-title"><i class="fas fa-venus-mars"></i> Gender Distribution</h3><div class="chart-box flex justify-center"><canvas id="pieGender"></canvas></div></div>
+            <div class="card"><h3 class="card-title"><i class="fas fa-user-tie"></i> Status Distribution</h3><div class="chart-box flex justify-center"><canvas id="pieStatus"></canvas></div></div>
+            <div class="card lg:col-span-2"><h3 class="card-title"><i class="fas fa-chart-bar"></i> Age Distribution (Histogram)</h3><div class="chart-box"><canvas id="histAge"></canvas></div></div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div class="card lg:col-span-2">
+                <h3 class="card-title"><i class="fas fa-braille"></i> Pressure Density (Hours vs GPA)</h3>
+                <div class="chart-box"><canvas id="scatterStudent"></canvas></div>
+            </div>
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-balance-scale"></i> Pressure Comparison (% Depressed)</h3>
+                <div class="chart-box"><canvas id="barPressure"></canvas></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div class="card"><h3 class="card-title"><i class="fas fa-building"></i> Top 5 Professions (Pressure)</h3><div class="chart-box"><canvas id="treeProf"></canvas></div></div>
+            <div class="card"><h3 class="card-title"><i class="fas fa-graduation-cap"></i> Top 5 Degrees (Pressure)</h3><div class="chart-box"><canvas id="treeDegree"></canvas></div></div>
+            <div class="card"><h3 class="card-title"><i class="fas fa-exclamation-triangle"></i> Suicidal Thoughts History</h3><div class="chart-box"><canvas id="colSuicide"></canvas></div></div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="card"><h3 class="card-title"><i class="fas fa-bed"></i> Sleep & Depression</h3><div class="chart-box"><canvas id="areaSleep"></canvas></div></div>
+            <div class="card"><h3 class="card-title"><i class="fas fa-wallet"></i> Financial Stress Impact</h3><div class="chart-box"><canvas id="areaFinance"></canvas></div></div>
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-utensils"></i> Dietary Habits (%)</h3>
+                <div class="chart-box"><canvas id="barDiet"></canvas></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const ageLabels = Array.from({length: 43}, (_, i) => (18 + i).toString());
+        const sleepLabels = ['1-2 hours', '3-4 hours', 'Less than 5 hours', '5-6 hours', '7-8 hours', '8 hours', 'More than 8 hours'];
+        
+        const COLORS = {
+            normal: '#0284c7', 
+            depressed: '#312e81',
+            male: '#0ea5e9', 
+            female: '#7c3aed',
+            student: '#0891b2', 
+            pro: '#475569', 
+            scatter_bg: 'rgba(59, 130, 246, 0.7)', 
+            scatter_border: '#1d4ed8'
+        };
+
+        const MOCK_DATA = {
+            kpi: { depression_rate: 15.5, avg_total_pressure: 3.8, avg_total_satisfaction: 2.5, total_family_history: 120, total_suicidal_thoughts: 45 },
+            pie_gender: { labels: ['Male', 'Female'], data: [450, 300] },
+            pie_status: { labels: ['Student', 'Pro'], data: [200, 550] },
+            hist_age: { labels: ageLabels, normal: Array.from({length: 43}, () => Math.floor(Math.random() * 80)), depressed: Array.from({length: 43}, () => Math.floor(Math.random() * 30)) },
+            scatter: Array.from({length: 50}, () => ({ x: Math.random()*12, y: 5+Math.random()*5, r: 5, count: 1 })),
+            comparison_pressure: {
+                labels: ['Level 0', 'Level 1', 'Level 2', 'Level 3', 'Level 4', 'Level 5'],
+                work: [5, 10, 25, 40, 55, 70],
+                academic: [2, 8, 20, 35, 60, 80]
+            },
+            col_suicide: { labels: ['Student', 'Pro'], normal: [100, 300], depressed: [50, 100] },
+            tree_prof: [ { category: 'Top 1', type: 'Pressure', value: 5.0, rank: 0 }, { category: 'Top 1', type: 'Satisfaction', value: 3.0, rank: 0 } ],
+            tree_degree: [ { category: 'A', type: 'Pressure', value: 5.0, rank: 0 }, { category: 'A', type: 'Satisfaction', value: 3.0, rank: 0 } ],
+            bar_diet: { labels: ['Healthy', 'Moderate', 'Unhealthy'], normal: [85.5, 65.2, 40.1], depressed: [14.5, 34.8, 59.9] },
+            area_sleep: { labels: sleepLabels, normal: [10, 20, 50, 100, 80, 20, 10], depressed: [5, 10, 80, 60, 20, 10, 5] },
+            area_finance: { labels: ['Level 1', 'Level 2', 'Level 3', 'Level 4', 'Level 5'], total: [500, 400, 300, 200, 100], depressed: [50, 80, 100, 120, 80], suicide: [10, 20, 40, 60, 50] }
+        };
+
+        Chart.defaults.font.family = "'Roboto', sans-serif";
+        Chart.defaults.color = '#334155';
+        Chart.defaults.maintainAspectRatio = false;
+
+        let chartInstances = {};
+        function createChart(id, config) {
+            if (chartInstances[id]) chartInstances[id].destroy();
+            chartInstances[id] = new Chart(document.getElementById(id), config);
+        }
+
+        function getTreemapColor(ctx) {
+            const item = ctx.raw;
+            if (!item) return 'transparent';
+            const type = item.type || item._data?.type || 'type1';
+            const value = Number(item.v || 0);
+            let values = [];
+            ctx.chart.data.datasets.forEach(ds => { ds.data.forEach(d => { const t = d.type || d._data?.type || 'type1'; if (t === type) values.push(Number(d.v || 0)); }); });
+            if (values.length === 0) return 'transparent';
+            const minVal = Math.min(...values); const maxVal = Math.max(...values);
+            let tFactor = (maxVal !== minVal) ? (value - minVal) / (maxVal - minVal) : 0;
+            tFactor = 0.2 + 0.8 * tFactor;
+            let colorLight, colorDark;
+            if (type === 'Satisfaction') { colorLight = '#99ccff'; colorDark = '#004080'; } 
+            else { colorLight = '#99ffcc'; colorDark = '#006644'; }
+            function interpolateColor(c1, c2, factor) {
+                const r1 = parseInt(c1.slice(1,3),16); const g1 = parseInt(c1.slice(3,5),16); const b1 = parseInt(c1.slice(5,7),16);
+                const r2 = parseInt(c2.slice(1,3),16); const g2 = parseInt(c2.slice(3,5),16); const b2 = parseInt(c2.slice(5,7),16);
+                return `rgb(${Math.round(r1 + (r2 - r1) * factor)},${Math.round(g1 + (g2 - g1) * factor)},${Math.round(b1 + (b2 - b1) * factor)})`;
+            }
+            return interpolateColor(colorLight, colorDark, tFactor);
+        }
+
+        async function init() {
+            const getChecklist = (id) => Array.from(document.querySelectorAll(`#${id} input:checked`)).map(i => i.value).join(',');
+
+            const params = new URLSearchParams({
+                status: document.getElementById('fStatus').value,
+                gender: document.getElementById('fGender').value,
+                ageMin: document.getElementById('fAgeMin').value,
+                ageMax: document.getElementById('fAgeMax').value,
+                degree: getChecklist('fDegreeList'),
+                profession: getChecklist('fProfessionList'),
+                history: document.getElementById('fHistory').value,
+                suicide: document.getElementById('fSuicide').value,
+                depression: document.getElementById('fDepression').value
+            });
+
+            let data = MOCK_DATA;
+            try {
+                if (!window.location.href.startsWith('blob:') && !window.location.href.startsWith('file:')) {
+                    const res = await fetch(`/api/custom-dashboard?${params.toString()}`);
+                    if (res.ok) data = await res.json();
+                }
+            } catch (err) { console.warn("Using mock data", err); }
+
+            if (data.kpi) {
+                document.getElementById('kpiDepression').innerText = data.kpi.depression_rate + '%';
+                document.getElementById('kpiPressure').innerText = data.kpi.avg_total_pressure;
+                document.getElementById('kpiSatisfaction').innerText = data.kpi.avg_total_satisfaction;
+                document.getElementById('kpiFamilyHistory').innerText = data.kpi.total_family_history;
+                document.getElementById('kpiSuicide').innerText = data.kpi.total_suicidal_thoughts;
+            }
+
+            if(!data.pie_gender) return;
+
+            createChart('pieGender', { type: 'pie', data: { labels: data.pie_gender.labels, datasets: [{ data: data.pie_gender.data, backgroundColor: [COLORS.male, COLORS.female], borderWidth: 1 }] }, options: { responsive: true, plugins: { legend: {position: 'bottom'}, tooltip: { callbacks: { label: function(c) { const v=c.parsed; const s=c.chart._metasets[c.datasetIndex].total; return `${c.label}: ${v} (${((v/s)*100).toFixed(1)}%)`; } } } } } });
+            createChart('pieStatus', { type: 'doughnut', data: { labels: data.pie_status.labels, datasets: [{ data: data.pie_status.data, backgroundColor: [COLORS.student, COLORS.pro], borderWidth: 1 }] }, options: { responsive: true, cutout: '65%', plugins: { legend: {position: 'bottom'}, tooltip: { callbacks: { label: function(c) { const v=c.parsed; const s=c.chart._metasets[c.datasetIndex].total; return `${c.label}: ${v} (${((v/s)*100).toFixed(1)}%)`; } } } } } });
+            createChart('histAge', { type: 'bar', data: { labels: data.hist_age.labels, datasets: [{ label: 'Normal', data: data.hist_age.normal, backgroundColor: COLORS.normal, barPercentage: 1.0, categoryPercentage: 1.0 }, { label: 'Depressed', data: data.hist_age.depressed, backgroundColor: COLORS.depressed, barPercentage: 1.0, categoryPercentage: 1.0 }] }, options: { scales: { x: {stacked: true, grid: {display: false}}, y: {stacked: true} }, plugins: { legend: { position: 'top', align: 'end' } } } });
+            
+            const scatData = data.scatter.map(d => ({ x: d.x, y: d.y, r: d.r || 5 }));
+            createChart('scatterStudent', { type: 'bubble', data: { datasets: [{ label: 'Depressed Students', data: scatData, backgroundColor: COLORS.scatter_bg, borderColor: COLORS.scatter_border, borderWidth: 1 }] }, options: { scales: { x: { title: {display: true, text: 'Study Hours'}, grid: {display: false} }, y: { title: {display: true, text: 'GPA'} } }, plugins: { legend: {display: false} } } });
+            
+            if (data.comparison_pressure) {
+                createChart('barPressure', {
+                    type: 'bar',
+                    data: {
+                        labels: data.comparison_pressure.labels,
+                        datasets: [
+                            { label: 'Work Pressure', data: data.comparison_pressure.work, backgroundColor: COLORS.pro, borderRadius: 4 },
+                            { label: 'Academic Pressure', data: data.comparison_pressure.academic, backgroundColor: COLORS.student, borderRadius: 4 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Depression Rate (%)' }, grid: { display: true } },
+                            x: { grid: { display: false } }
+                        },
+                        plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.raw}%` } } }
+                    }
+                });
+            }
+
+            createChart('colSuicide', { type: 'bar', data: { labels: data.col_suicide.labels, datasets: [{ label: 'Normal', data: data.col_suicide.normal, backgroundColor: COLORS.normal }, { label: 'Depressed', data: data.col_suicide.depressed, backgroundColor: COLORS.depressed }] }, options: { scales: { x: {stacked: true, grid: {display: false}}, y: {stacked: true} } } });
+            
+            createChart('barDiet', { 
+                type: 'bar', 
+                data: { 
+                    labels: data.bar_diet.labels, 
+                    datasets: [
+                        { label: 'Normal', data: data.bar_diet.normal, backgroundColor: COLORS.normal }, 
+                        { label: 'Depressed', data: data.bar_diet.depressed, backgroundColor: COLORS.depressed }
+                    ] 
+                }, 
+                options: { 
+                    responsive: true,
+                    scales: { 
+                        x: { stacked: true, grid: { display: false } }, 
+                        y: { stacked: true, max: 100, title: {display: true, text: 'Percentage (%)'} }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: { label: (c) => `${c.dataset.label}: ${c.raw}%` }
+                        }
+                    }
+                } 
+            });
+
+            createChart('areaSleep', { type: 'bar', data: { labels: data.area_sleep.labels, datasets: [ { label: 'Normal', data: data.area_sleep.normal, backgroundColor: COLORS.normal }, { label: 'Depressed', data: data.area_sleep.depressed, backgroundColor: COLORS.depressed } ] }, options: { indexAxis: 'y', responsive: true, scales: { x: { stacked: true, grid: { display: true } }, y: { stacked: true, grid: { display: false } } }, plugins: { legend: { position: 'top', align: 'end' } } } });
+            createChart('areaFinance', {
+                type: 'line',
+                data: {
+                    labels: data.area_finance.labels,
+                    datasets: [
+                        { label: 'Total', data: data.area_finance.total, backgroundColor: 'rgba(203, 213, 225, 0.4)', borderColor: '#94a3b8', fill: true, tension: 0.4 },
+                        { label: 'Depressed', data: data.area_finance.depressed, backgroundColor: 'rgba(59, 130, 246, 0.6)', borderColor: '#3b82f6', fill: true, tension: 0.4 },
+                        { label: 'Suicidal (Yes)', data: data.area_finance.suicide, backgroundColor: 'rgba(239, 68, 68, 0.8)', borderColor: '#ef4444', fill: true, tension: 0.4 }
+                    ]
+                },
+                options: { scales: { y: {beginAtZero: true}, x: {grid: {display: false}} }, plugins: { legend: {position: 'top'} } }
+            });
+            const treemapCommon = { key: 'value', groups: ['category', 'type'], labels: { display: true, align: 'center', color: 'white', font: (ctx) => ({ size: ctx.raw.g === 'category' ? 14 : 11, weight: ctx.raw.g === 'category' ? 'bold' : 'normal' }), formatter: (ctx) => ctx.raw.g === 'category' ? ctx.raw.v : `${ctx.raw._data.type}\n${ctx.raw.v}` }, borderWidth: 1, borderColor: 'white', spacing: 0, header: { display: true, backgroundColor: 'rgba(203, 213, 225, 0.5)', color: '#334155', font: { weight: 'bold' } }, sort: (a, b) => b.value - a.value };
+            createChart('treeProf', { type: 'treemap', data: { datasets: [{ ...treemapCommon, tree: data.tree_prof, backgroundColor: getTreemapColor }] }, options: { plugins: { legend: {display: false}, tooltip: {callbacks: {label: (c) => `${c.raw._data ? c.raw._data.category : ''}: ${c.raw.v}`}} } } });
+            createChart('treeDegree', { type: 'treemap', data: { datasets: [{ ...treemapCommon, tree: data.tree_degree, backgroundColor: getTreemapColor }] }, options: { plugins: { legend: {display: false}, tooltip: {callbacks: {label: (c) => `${c.raw._data ? c.raw._data.category : ''}: ${c.raw.v}`}} } } });
+        }
+        init()
+        
+        function resetFilters() {
+            document.querySelectorAll('input[type="checkbox"]').forEach(i => i.checked = false);
+            document.querySelectorAll('select').forEach(el => el.selectedIndex = 0);
+            document.getElementById('fAgeMin').value = 18;
+            document.getElementById('fAgeMax').value = 60;
+            init()
+        };
+    </script>
+</body>
+</html>
