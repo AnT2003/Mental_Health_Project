@@ -6,4 +6,5 @@ scikit-learn
 xgboost
 python-dotenv
 joblib
+flask-login
 gunicorn
