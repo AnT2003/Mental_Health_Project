@@ -132,7 +132,7 @@ class RareLabelEncoder(BaseEstimator, TransformerMixin):
         return X_out
 
 # ==============================================================================
-# 2. KHỞI TẠO TÀI NGUYÊN (FIX LỖI GUNICORN + SELF HEALING)
+# 2. KHỞI TẠO
 # ==============================================================================
 
 DATA_PATH = 'train.csv'
@@ -142,63 +142,16 @@ CONFIG_PATH = 'model_ui_config.json'
 system_bundle = None
 ui_config = None
 
-# --- [QUAN TRỌNG] FIX LỖI "Can't get attribute" KHI CHẠY TRÊN RENDER ---
 try:
     sys.modules['__main__'].LogicalCleaner = LogicalCleaner
     sys.modules['__main__'].RareLabelEncoder = RareLabelEncoder
 except:
     pass
 
-# --- HÀM TỰ ĐỘNG TRAIN LẠI NẾU FILE MODEL CŨ BỊ LỖI (BỔ SUNG PHẦN NÀY) ---
-def retrain_model_on_server():
-    print(">>> ⚠️ MODEL LOAD FAILED. STARTING EMERGENCY RETRAINING...")
-    try:
-        if not os.path.exists(DATA_PATH): raise Exception("Train.csv not found!")
-        df = pd.read_csv(DATA_PATH)
-        for c in ['id', 'Name', 'PassengerId']:
-            if c in df.columns: df.drop(c, axis=1, inplace=True)
-        X = df.drop('Depression', axis=1); y = df['Depression']
-        
-        vars_to_rare = ['Occupation', 'Degree', 'Profession', 'City']
-        pre_cleaner = Pipeline([('cleaner', LogicalCleaner()), ('rare_encoder', RareLabelEncoder(variables=vars_to_rare, threshold=5))])
-        
-        X_pre = pre_cleaner.fit_transform(X, y)
-        final_features = X_pre.columns.tolist()
-        
-        cat_cols = X_pre.select_dtypes(include=['object', 'category']).columns.tolist()
-        num_cols = X_pre.select_dtypes(exclude=['object', 'category']).columns.tolist()
-        
-        num_pipe = Pipeline([('imputer', SimpleImputer(strategy='median')), ('scaler', StandardScaler())])
-        cat_pipe = Pipeline([('imputer', SimpleImputer(strategy='constant', fill_value='Other')), ('target_enc', TargetEncoder(smooth='auto')), ('scaler', StandardScaler())])
-        
-        final_preprocessor = ColumnTransformer(transformers=[('num', num_pipe, num_cols), ('cat', cat_pipe, cat_cols)], verbose_feature_names_out=False)
-        
-        scale_pos_weight = (y == 0).sum() / (y == 1).sum()
-        model = xgb.XGBClassifier(n_estimators=100, max_depth=4, scale_pos_weight=scale_pos_weight, n_jobs=1)
-        
-        X_processed = final_preprocessor.fit_transform(X_pre, y)
-        model.fit(X_processed, y)
-        
-        # Cập nhật lại valid_labels_ cho object rare_encoder để dùng khi predict
-        pre_cleaner.named_steps['rare_encoder'].valid_labels_ = pre_cleaner.named_steps['rare_encoder'].valid_labels_
-        
-        new_bundle = {'selector_pipeline': pre_cleaner, 'preprocessor': final_preprocessor, 'model': model, 'threshold': 0.45, 'required_features': final_features}
-        joblib.dump(new_bundle, MODEL_PATH)
-        print(">>> ✅ EMERGENCY RETRAINING SUCCESSFUL."); return new_bundle
-    except Exception as e:
-        print(f"!!! RETRAINING FAILED: {str(e)}"); traceback.print_exc(); return None
-
 # --- LOAD MODEL ---
 if os.path.exists(MODEL_PATH):
-    try:
-        system_bundle = joblib.load(MODEL_PATH)
-        print(f">>> MODEL LOADED SUCCESSFULLY: {MODEL_PATH}")
-    except Exception as e:
-        print(f"!!! LOAD ERROR: {e}. Attempting retrain...")
-        system_bundle = retrain_model_on_server()
-else:
-    print(">>> Model not found. Training new one...")
-    system_bundle = retrain_model_on_server()
+    system_bundle = joblib.load(MODEL_PATH)
+    print(f">>> MODEL LOADED SUCCESSFULLY: {MODEL_PATH}")
 
 # --- LOAD UI CONFIG ---
 if os.path.exists(CONFIG_PATH):
@@ -361,7 +314,7 @@ def predict():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/custom-dashboard')
-@login_required  # <--- API BẢO MẬT
+@login_required  # --- API BẢO MẬT
 def get_custom_dashboard():
     try:
         df = load_data_dashboard()
