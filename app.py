@@ -1,4 +1,5 @@
 import os
+import sys
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
@@ -7,7 +8,6 @@ import numpy as np
 import joblib
 import json
 import traceback
-import sys
 
 # --- CÁC THƯ VIỆN CẦN THIẾT CHO SKLEARN PIPELINE ---
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -27,7 +27,7 @@ ENV_MODE = os.getenv("FLASK_ENV", "production")
 DEBUG_MODE = True if ENV_MODE == "development" else False
 
 # ==============================================================================
-# 1. ĐỊNH NGHĨA CLASS
+# 1. ĐỊNH NGHĨA CLASS (PHẢI CÓ TRƯỚC KHI LOAD MODEL)
 # ==============================================================================
 
 class LogicalCleaner(BaseEstimator, TransformerMixin):
@@ -110,10 +110,19 @@ system_bundle = None
 ui_config = None
 
 # --- [QUAN TRỌNG] FIX LỖI "Can't get attribute" KHI CHẠY TRÊN RENDER ---
-# Đoạn code này đánh lừa joblib rằng LogicalCleaner đang nằm ở __main__
-import __main__
-setattr(__main__, "LogicalCleaner", LogicalCleaner)
-setattr(__main__, "RareLabelEncoder", RareLabelEncoder)
+# Sử dụng sys.modules để gán trực tiếp class vào __main__ của Gunicorn
+try:
+    import sys
+    # Lấy module __main__ hiện tại (là Gunicorn worker)
+    main_module = sys.modules['__main__']
+    
+    # Gán class LogicalCleaner và RareLabelEncoder vào __main__
+    # Để khi joblib.load tìm __main__.LogicalCleaner thì sẽ thấy nó
+    setattr(main_module, 'LogicalCleaner', LogicalCleaner)
+    setattr(main_module, 'RareLabelEncoder', RareLabelEncoder)
+    print(">>> INJECTED CLASSES INTO __main__ SUCCESSFULLY")
+except Exception as e:
+    print(f"!!! WARNING: Could not inject classes: {e}")
 
 # --- LOAD MODEL ---
 if os.path.exists(MODEL_PATH):
@@ -123,6 +132,8 @@ if os.path.exists(MODEL_PATH):
         print(f">>> Threshold Setting: {system_bundle.get('threshold', 0.5)}")
     except Exception as e:
         print(f"!!! CRITICAL ERROR: Không thể load model. Chi tiết: {e}")
+        # In traceback đầy đủ để debug nếu vẫn lỗi
+        traceback.print_exc()
 
 # --- LOAD UI CONFIG ---
 if os.path.exists(CONFIG_PATH):
