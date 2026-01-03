@@ -7,4 +7,3 @@ xgboost
 python-dotenv
 joblib
 gunicorn
-flask-login

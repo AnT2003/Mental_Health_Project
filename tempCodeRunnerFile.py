@@ -3,7 +3,6 @@ import sys
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request, redirect, url_for, flash
 from flask_cors import CORS
-# --- THÊM THƯ VIỆN LOGIN ---
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 
 import pandas as pd
@@ -12,8 +11,6 @@ import joblib
 import json
 import traceback
 import xgboost as xgb 
-
-# --- CÁC THƯ VIỆN CẦN THIẾT CHO SKLEARN PIPELINE ---
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import TargetEncoder, StandardScaler, OrdinalEncoder
 from sklearn.pipeline import Pipeline
@@ -66,7 +63,6 @@ class LogicalCleaner(BaseEstimator, TransformerMixin):
     def transform(self, X):
         X_out = X.copy()
         
-        # --- 1. CLEAN SLEEP DURATION (ĐÃ SỬA LẠI CHO KHỚP MODEL TRAIN) ---
         if 'Sleep Duration' in X_out.columns:
             def clean_sleep(val):
                 s = str(val).lower().strip()
@@ -142,63 +138,16 @@ CONFIG_PATH = 'model_ui_config.json'
 system_bundle = None
 ui_config = None
 
-# --- FIX LỖI IMPORT TRÊN RENDER ---
 try:
     sys.modules['__main__'].LogicalCleaner = LogicalCleaner
     sys.modules['__main__'].RareLabelEncoder = RareLabelEncoder
 except:
     pass
 
-# --- HÀM TỰ ĐỘNG TRAIN LẠI NẾU FILE MODEL CŨ BỊ LỖI (BẮT BUỘC PHẢI CÓ) ---
-# (Nếu không có hàm này, khi load model bị lỗi class, server sẽ sập ngay)
-def retrain_model_on_server():
-    print(">>> ⚠️ MODEL LOAD FAILED. STARTING EMERGENCY RETRAINING...")
-    try:
-        if not os.path.exists(DATA_PATH): raise Exception("Train.csv not found!")
-        df = pd.read_csv(DATA_PATH)
-        for c in ['id', 'Name', 'PassengerId']:
-            if c in df.columns: df.drop(c, axis=1, inplace=True)
-        X = df.drop('Depression', axis=1); y = df['Depression']
-        
-        vars_to_rare = ['Occupation', 'Degree', 'Profession', 'City']
-        pre_cleaner = Pipeline([('cleaner', LogicalCleaner()), ('rare_encoder', RareLabelEncoder(variables=vars_to_rare, threshold=5))])
-        
-        X_pre = pre_cleaner.fit_transform(X, y)
-        final_features = X_pre.columns.tolist()
-        
-        cat_cols = X_pre.select_dtypes(include=['object', 'category']).columns.tolist()
-        num_cols = X_pre.select_dtypes(exclude=['object', 'category']).columns.tolist()
-        
-        num_pipe = Pipeline([('imputer', SimpleImputer(strategy='median')), ('scaler', StandardScaler())])
-        cat_pipe = Pipeline([('imputer', SimpleImputer(strategy='constant', fill_value='Other')), ('target_enc', TargetEncoder(smooth='auto')), ('scaler', StandardScaler())])
-        
-        final_preprocessor = ColumnTransformer(transformers=[('num', num_pipe, num_cols), ('cat', cat_pipe, cat_cols)], verbose_feature_names_out=False)
-        
-        scale_pos_weight = (y == 0).sum() / (y == 1).sum()
-        model = xgb.XGBClassifier(n_estimators=100, max_depth=4, scale_pos_weight=scale_pos_weight, n_jobs=1)
-        
-        X_processed = final_preprocessor.fit_transform(X_pre, y)
-        model.fit(X_processed, y)
-        
-        pre_cleaner.named_steps['rare_encoder'].valid_labels_ = pre_cleaner.named_steps['rare_encoder'].valid_labels_
-        
-        new_bundle = {'selector_pipeline': pre_cleaner, 'preprocessor': final_preprocessor, 'model': model, 'threshold': 0.45, 'required_features': final_features}
-        joblib.dump(new_bundle, MODEL_PATH)
-        print(">>> ✅ EMERGENCY RETRAINING SUCCESSFUL."); return new_bundle
-    except Exception as e:
-        print(f"!!! RETRAINING FAILED: {str(e)}"); traceback.print_exc(); return None
-
 # --- LOAD MODEL ---
 if os.path.exists(MODEL_PATH):
-    try:
-        system_bundle = joblib.load(MODEL_PATH)
-        print(f">>> MODEL LOADED SUCCESSFULLY: {MODEL_PATH}")
-    except Exception as e:
-        print(f"!!! LOAD ERROR: {e}. Attempting retrain...")
-        system_bundle = retrain_model_on_server()
-else:
-    print(">>> Model not found. Training new one...")
-    system_bundle = retrain_model_on_server()
+    system_bundle = joblib.load(MODEL_PATH)
+    print(f">>> MODEL LOADED SUCCESSFULLY: {MODEL_PATH}")
 
 # --- LOAD UI CONFIG ---
 if os.path.exists(CONFIG_PATH):
@@ -255,7 +204,7 @@ def logout():
     return redirect(url_for('login'))
 
 # ==============================================================================
-# 4. ROUTES CƠ BẢN (PUBLIC)
+# 4. ROUTES CƠ BẢN 
 # ==============================================================================
 @app.route('/')
 def home():
@@ -265,7 +214,7 @@ def home():
     data_sample = df.head(500).to_dict(orient='records')
     column_names = df.columns.tolist()
     
-    # --- [ĐÃ KHÔI PHỤC] Logic tính thống kê mô tả ---
+    # --- [KHÔI PHỤC] Logic tính thống kê mô tả ---
     desc_df = df.describe().reset_index()
     desc_data = desc_df.to_dict(orient='records')
     desc_columns = desc_df.columns.tolist()
@@ -293,12 +242,12 @@ def get_model_config():
 # ==============================================================================
 
 @app.route('/dashboard')
-@login_required  # <--- BẮT BUỘC ĐĂNG NHẬP
+@login_required  # --- BẮT BUỘC ĐĂNG NHẬP
 def dashboard(): 
     return render_template('dashboard.html')
 
 @app.route('/ml')
-@login_required  # <--- BẮT BUỘC ĐĂNG NHẬP
+@login_required  # --- BẮT BUỘC ĐĂNG NHẬP
 def ml_page():
     return render_template('ml.html')
 
@@ -371,7 +320,7 @@ def predict():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/custom-dashboard')
-@login_required  # <--- API BẢO MẬT
+@login_required  # --- API BẢO MẬT
 def get_custom_dashboard():
     try:
         df = load_data_dashboard()
