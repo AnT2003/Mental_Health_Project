@@ -73,12 +73,15 @@ class LogicalCleaner(BaseEstimator, TransformerMixin):
                 # Nhóm < 4 hours
                 if any(x in s for x in ['1-2', '2-3', '3-4', '1-3']):
                     return 'Less than 4 hours'
-                # Nhóm 4-6 hours (GOM CHUNG ĐỂ KHỚP MODEL)
-                elif any(x in s for x in ['less than 5','5-6', '4-6', '3-6','4-5','than 5']):
-                    return '4-6 hours'
-                # Nhóm 7-8 hours
-                elif any(x in s for x in ['7-8', '6-8', '6-7', '8 hours', '9-5', '10-6']): 
-                    return '7-8 hours'
+                # Nhóm 4-6 hours
+                elif any(x in s for x in ['less than 5','4-5','than 5']):
+                    return '4-5 hours'
+                # Nhóm 4-6 hours
+                elif any(x in s for x in ['5-6', '4-6', '3-6','than 5']):
+                    return '5-6 hours'
+                # Nhóm 7-8 hours (Chuẩn)
+                elif any(x in s for x in ['7-8', '6-8', '6-7']): 
+                    return '6-8 hours'
                 # Nhóm > 8 hours
                 elif any(x in s for x in ['more than 8', '8-9', '9-11', '10-11']):
                     return 'More than 8 hours'
@@ -146,7 +149,7 @@ try:
 except:
     pass
 
-# --- HÀM TỰ ĐỘNG TRAIN LẠI NẾU FILE MODEL CŨ BỊ LỖI ---
+# --- HÀM TỰ ĐỘNG TRAIN LẠI NẾU FILE MODEL CŨ BỊ LỖI (BỔ SUNG PHẦN NÀY) ---
 def retrain_model_on_server():
     print(">>> ⚠️ MODEL LOAD FAILED. STARTING EMERGENCY RETRAINING...")
     try:
@@ -224,8 +227,7 @@ def load_data_dashboard():
     cols = ['Work/Study Hours', 'CGPA', 'Work Pressure', 'Academic Pressure', 
             'Job Satisfaction', 'Study Satisfaction', 'Financial Stress', 'Age', 'Depression']
     for c in cols:
-        if c in df.columns: 
-            df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
+        if c in df.columns: df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
             
     return df
 
