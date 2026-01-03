@@ -1,17 +1,24 @@
 import os
 import sys
 from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, redirect, url_for, flash
 from flask_cors import CORS
+# --- THÊM THƯ VIỆN LOGIN ---
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+
 import pandas as pd
 import numpy as np
 import joblib
 import json
 import traceback
+import xgboost as xgb 
 
 # --- CÁC THƯ VIỆN CẦN THIẾT CHO SKLEARN PIPELINE ---
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import TargetEncoder, StandardScaler, OrdinalEncoder
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
 
 # ==============================================================================
 # 0. CẤU HÌNH BẢO MẬT & MÔI TRƯỜNG
@@ -21,10 +28,34 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
+# Cấu hình Secret Key
 app.secret_key = os.getenv("SECRET_KEY", "default-dev-key-do-not-use-in-prod")
-PORT = int(os.getenv("PORT", 8080))
+PORT = int(os.getenv("PORT", 10000))
 ENV_MODE = os.getenv("FLASK_ENV", "production")
 DEBUG_MODE = True if ENV_MODE == "development" else False
+
+# --- CẤU HÌNH LOGIN MANAGER ---
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login' # Chưa đăng nhập sẽ bị đá về đây
+
+# --- LẤY TÀI KHOẢN TỪ BIẾN MÔI TRƯỜNG ---
+SYS_USER = os.getenv("ADMIN_USERNAME", "admin")
+SYS_PASS = os.getenv("ADMIN_PASSWORD", "admin123")
+
+USERS = {
+    SYS_USER: SYS_PASS
+}
+
+class User(UserMixin):
+    def __init__(self, id):
+        self.id = id
+
+@login_manager.user_loader
+def load_user(user_id):
+    if user_id in USERS:
+        return User(user_id)
+    return None
 
 # ==============================================================================
 # 1. ĐỊNH NGHĨA CLASS (PHẢI CÓ TRƯỚC KHI LOAD MODEL)
@@ -35,21 +66,20 @@ class LogicalCleaner(BaseEstimator, TransformerMixin):
     def transform(self, X):
         X_out = X.copy()
         
-        # --- 1. CLEAN SLEEP DURATION ---
+        # --- 1. CLEAN SLEEP DURATION (ĐÃ SỬA LẠI CHO KHỚP MODEL TRAIN) ---
         if 'Sleep Duration' in X_out.columns:
             def clean_sleep(val):
                 s = str(val).lower().strip()
-                if any(x in s for x in ['1-2', '2-3', '3-4',  '1-3']):
+                # Nhóm < 4 hours
+                if any(x in s for x in ['1-2', '2-3', '3-4', '1-3']):
                     return 'Less than 4 hours'
-                # Nhóm 4-6 hours
-                elif any(x in s for x in ['less than 5','4-5','than 5']):
-                    return '4-5 hours'
-                # Nhóm 4-6 hours
-                elif any(x in s for x in ['5-6', '4-6', '3-6','than 5']):
-                    return '5-6 hours'
-                # Nhóm 7-8 hours (Chuẩn)
-                elif any(x in s for x in ['7-8', '6-8', '6-7']): 
-                    return '6-8 hours'
+                # Nhóm 4-6 hours (GOM CHUNG ĐỂ KHỚP MODEL)
+                elif any(x in s for x in ['less than 5','5-6', '4-6', '3-6','4-5','than 5']):
+                    return '4-6 hours'
+                # Nhóm 7-8 hours
+                elif any(x in s for x in ['7-8', '6-8', '6-7', '8 hours', '9-5', '10-6']): 
+                    return '7-8 hours'
+                # Nhóm > 8 hours
                 elif any(x in s for x in ['more than 8', '8-9', '9-11', '10-11']):
                     return 'More than 8 hours'
                 else:
@@ -60,23 +90,17 @@ class LogicalCleaner(BaseEstimator, TransformerMixin):
         if 'Dietary Habits' in X_out.columns:
             def clean_diet(val):
                 s = str(val).lower().strip()
-                if s in ['healthy', 'more healthy']:
-                    return 'Healthy'
-                elif s in ['moderate']:
-                    return 'Moderate'
-                elif s in ['unhealthy', 'less than healthy', 'no healthy', 'less healthy']:
-                    return 'Unhealthy'
-                else: 
-                    return 'Unknown'
+                if s in ['healthy', 'more healthy']: return 'Healthy'
+                elif s in ['moderate']: return 'Moderate'
+                elif s in ['unhealthy', 'less than healthy', 'no healthy', 'less healthy']: return 'Unhealthy'
+                else: return 'Unknown'
             X_out['Dietary Habits'] = X_out['Dietary Habits'].apply(clean_diet)
 
         # --- 3. GỘP CỘT ---
         if 'Profession' in X_out.columns and 'Degree' in X_out.columns:
             X_out['Occupation'] = X_out['Profession'].fillna(X_out['Degree'])
-            
         if 'Work Pressure' in X_out.columns and 'Academic Pressure' in X_out.columns:
             X_out['Pressure'] = X_out['Work Pressure'].fillna(X_out['Academic Pressure'])
-
         if 'Job Satisfaction' in X_out.columns and 'Study Satisfaction' in X_out.columns:
             X_out['Satisfaction'] = X_out['Job Satisfaction'].fillna(X_out['Study Satisfaction'])
             
@@ -99,12 +123,13 @@ class RareLabelEncoder(BaseEstimator, TransformerMixin):
         X_out = X.copy()
         for col in self.variables:
             if col in X_out.columns:
-                valid_list = self.valid_labels_.get(col, [])
+                # Kiểm tra thuộc tính tồn tại để tránh lỗi khi retrain
+                valid_list = getattr(self, 'valid_labels_', {}).get(col, [])
                 X_out[col] = np.where(X_out[col].isin(valid_list), X_out[col], 'Other')
         return X_out
 
 # ==============================================================================
-# 2. KHỞI TẠO TÀI NGUYÊN (FIX LỖI GUNICORN TẠI ĐÂY)
+# 2. KHỞI TẠO TÀI NGUYÊN (FIX LỖI GUNICORN + SELF HEALING)
 # ==============================================================================
 
 DATA_PATH = 'train.csv'
@@ -115,41 +140,72 @@ system_bundle = None
 ui_config = None
 
 # --- [QUAN TRỌNG] FIX LỖI "Can't get attribute" KHI CHẠY TRÊN RENDER ---
-# Sử dụng sys.modules để gán trực tiếp class vào __main__ của Gunicorn
 try:
-    import sys
-    # Lấy module __main__ hiện tại (là Gunicorn worker)
-    main_module = sys.modules['__main__']
-    
-    # Gán class LogicalCleaner và RareLabelEncoder vào __main__
-    # Để khi joblib.load tìm __main__.LogicalCleaner thì sẽ thấy nó
-    setattr(main_module, 'LogicalCleaner', LogicalCleaner)
-    setattr(main_module, 'RareLabelEncoder', RareLabelEncoder)
-    print(">>> INJECTED CLASSES INTO __main__ SUCCESSFULLY")
-except Exception as e:
-    print(f"!!! WARNING: Could not inject classes: {e}")
+    sys.modules['__main__'].LogicalCleaner = LogicalCleaner
+    sys.modules['__main__'].RareLabelEncoder = RareLabelEncoder
+except:
+    pass
+
+# --- HÀM TỰ ĐỘNG TRAIN LẠI NẾU FILE MODEL CŨ BỊ LỖI ---
+def retrain_model_on_server():
+    print(">>> ⚠️ MODEL LOAD FAILED. STARTING EMERGENCY RETRAINING...")
+    try:
+        if not os.path.exists(DATA_PATH): raise Exception("Train.csv not found!")
+        df = pd.read_csv(DATA_PATH)
+        for c in ['id', 'Name', 'PassengerId']:
+            if c in df.columns: df.drop(c, axis=1, inplace=True)
+        X = df.drop('Depression', axis=1); y = df['Depression']
+        
+        vars_to_rare = ['Occupation', 'Degree', 'Profession', 'City']
+        pre_cleaner = Pipeline([('cleaner', LogicalCleaner()), ('rare_encoder', RareLabelEncoder(variables=vars_to_rare, threshold=5))])
+        
+        X_pre = pre_cleaner.fit_transform(X, y)
+        final_features = X_pre.columns.tolist()
+        
+        cat_cols = X_pre.select_dtypes(include=['object', 'category']).columns.tolist()
+        num_cols = X_pre.select_dtypes(exclude=['object', 'category']).columns.tolist()
+        
+        num_pipe = Pipeline([('imputer', SimpleImputer(strategy='median')), ('scaler', StandardScaler())])
+        cat_pipe = Pipeline([('imputer', SimpleImputer(strategy='constant', fill_value='Other')), ('target_enc', TargetEncoder(smooth='auto')), ('scaler', StandardScaler())])
+        
+        final_preprocessor = ColumnTransformer(transformers=[('num', num_pipe, num_cols), ('cat', cat_pipe, cat_cols)], verbose_feature_names_out=False)
+        
+        scale_pos_weight = (y == 0).sum() / (y == 1).sum()
+        model = xgb.XGBClassifier(n_estimators=100, max_depth=4, scale_pos_weight=scale_pos_weight, n_jobs=1)
+        
+        X_processed = final_preprocessor.fit_transform(X_pre, y)
+        model.fit(X_processed, y)
+        
+        # Cập nhật lại valid_labels_ cho object rare_encoder để dùng khi predict
+        pre_cleaner.named_steps['rare_encoder'].valid_labels_ = pre_cleaner.named_steps['rare_encoder'].valid_labels_
+        
+        new_bundle = {'selector_pipeline': pre_cleaner, 'preprocessor': final_preprocessor, 'model': model, 'threshold': 0.45, 'required_features': final_features}
+        joblib.dump(new_bundle, MODEL_PATH)
+        print(">>> ✅ EMERGENCY RETRAINING SUCCESSFUL."); return new_bundle
+    except Exception as e:
+        print(f"!!! RETRAINING FAILED: {str(e)}"); traceback.print_exc(); return None
 
 # --- LOAD MODEL ---
 if os.path.exists(MODEL_PATH):
     try:
         system_bundle = joblib.load(MODEL_PATH)
         print(f">>> MODEL LOADED SUCCESSFULLY: {MODEL_PATH}")
-        print(f">>> Threshold Setting: {system_bundle.get('threshold', 0.5)}")
     except Exception as e:
-        print(f"!!! CRITICAL ERROR: Không thể load model. Chi tiết: {e}")
-        # In traceback đầy đủ để debug nếu vẫn lỗi
-        traceback.print_exc()
+        print(f"!!! LOAD ERROR: {e}. Attempting retrain...")
+        system_bundle = retrain_model_on_server()
+else:
+    print(">>> Model not found. Training new one...")
+    system_bundle = retrain_model_on_server()
 
 # --- LOAD UI CONFIG ---
 if os.path.exists(CONFIG_PATH):
     try:
-        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
-            ui_config = json.load(f)
+        with open(CONFIG_PATH, 'r', encoding='utf-8') as f: ui_config = json.load(f)
         print(">>> UI CONFIG LOADED")
     except Exception as e:
         print(f"!!! Error loading config: {e}")
 
-def load_data():
+def load_data_dashboard():
     """Hàm load và làm sạch sơ bộ dữ liệu cho Dashboard"""
     if not os.path.exists(DATA_PATH): return pd.DataFrame()
     df = pd.read_csv(DATA_PATH)
@@ -174,38 +230,45 @@ def load_data():
     return df
 
 # ==============================================================================
-# 3. ROUTES CƠ BẢN
+# 3. ROUTES: LOGIN & LOGOUT
+# ==============================================================================
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        if username in USERS and USERS[username] == password:
+            user = User(username)
+            login_user(user)
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Invalid username or password!')
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+# ==============================================================================
+# 4. ROUTES CƠ BẢN (PUBLIC)
 # ==============================================================================
 @app.route('/')
 def home():
-    df = load_data()
+    df = load_data_dashboard()
     if df.empty: return render_template('index.html', data_sample=[], stats={}, column_names=[])
     
     data_sample = df.head(500).to_dict(orient='records')
     column_names = df.columns.tolist()
     
-    desc_df = df.describe().reset_index()
-    desc_data = desc_df.to_dict(orient='records')
-    desc_columns = desc_df.columns.tolist()
-
     stats = {
         'avg_age': round(df['Age'].mean(), 1),
         'avg_cgpa': round(df['CGPA'].mean(), 2),
         'depression_rate': round((df['Depression'].sum() / len(df)) * 100, 1)
     }
-    return render_template('index.html', data_sample=data_sample, stats=stats, column_names=column_names, desc_data=desc_data, desc_columns=desc_columns)
-
-@app.route('/dashboard')
-def dashboard(): 
-    return render_template('dashboard.html')
-
-@app.route('/ml')
-def ml_page():
-    return render_template('ml.html')
-
-# ==============================================================================
-# 4. API MACHINE LEARNING (PREDICT)
-# ==============================================================================
+    return render_template('index.html', data_sample=data_sample, stats=stats, column_names=column_names)
 
 @app.route('/api/model-config', methods=['GET'])
 def get_model_config():
@@ -213,7 +276,22 @@ def get_model_config():
         return jsonify(ui_config)
     return jsonify({"error": "Config file not found"}), 404
 
+# ==============================================================================
+# 5. ROUTES BẢO MẬT (DASHBOARD & PREDICT)
+# ==============================================================================
+
+@app.route('/dashboard')
+@login_required  # <--- BẮT BUỘC ĐĂNG NHẬP
+def dashboard(): 
+    return render_template('dashboard.html')
+
+@app.route('/ml')
+@login_required  # <--- BẮT BUỘC ĐĂNG NHẬP
+def ml_page():
+    return render_template('ml.html')
+
 @app.route('/api/predict', methods=['POST'])
+@login_required  # <--- API BẢO MẬT
 def predict():
     if not system_bundle:
         return jsonify({'error': 'Model chưa sẵn sàng.'}), 500
@@ -280,13 +358,11 @@ def predict():
         traceback.print_exc() 
         return jsonify({'error': str(e)}), 500
 
-# ==============================================================================
-# 5. API DASHBOARD
-# ==============================================================================
 @app.route('/api/custom-dashboard')
+@login_required  # <--- API BẢO MẬT
 def get_custom_dashboard():
     try:
-        df = load_data()
+        df = load_data_dashboard()
         if df.empty: return jsonify({})
 
         f_status = request.args.get('status')
