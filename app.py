@@ -41,10 +41,15 @@ class LogicalCleaner(BaseEstimator, TransformerMixin):
                 s = str(val).lower().strip()
                 if any(x in s for x in ['1-2', '2-3', '3-4',  '1-3']):
                     return 'Less than 4 hours'
-                elif any(x in s for x in ['less than 5','5-6', '4-6', '3-6','4-5','than 5']):
-                    return '4-6 hours'
-                elif any(x in s for x in ['7-8', '6-8', '6-7', '8 hours', '9-5', '10-6']): 
-                    return '7-8 hours'
+                # Nhóm 4-6 hours
+                elif any(x in s for x in ['less than 5','4-5','than 5']):
+                    return '4-5 hours'
+                # Nhóm 4-6 hours
+                elif any(x in s for x in ['5-6', '4-6', '3-6','than 5']):
+                    return '5-6 hours'
+                # Nhóm 7-8 hours (Chuẩn)
+                elif any(x in s for x in ['7-8', '6-8', '6-7']): 
+                    return '6-8 hours'
                 elif any(x in s for x in ['more than 8', '8-9', '9-11', '10-11']):
                     return 'More than 8 hours'
                 else:
