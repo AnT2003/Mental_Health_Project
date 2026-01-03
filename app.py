@@ -7,6 +7,7 @@ import numpy as np
 import joblib
 import json
 import traceback
+import sys
 
 # --- CÁC THƯ VIỆN CẦN THIẾT CHO SKLEARN PIPELINE ---
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -15,22 +16,18 @@ from sklearn.preprocessing import TargetEncoder, StandardScaler, OrdinalEncoder
 # ==============================================================================
 # 0. CẤU HÌNH BẢO MẬT & MÔI TRƯỜNG
 # ==============================================================================
-# Load biến môi trường từ file .env
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-# Cấu hình Secret Key (Lấy từ .env)
 app.secret_key = os.getenv("SECRET_KEY", "default-dev-key-do-not-use-in-prod")
-
-# Lấy các cấu hình khác
 PORT = int(os.getenv("PORT", 8080))
 ENV_MODE = os.getenv("FLASK_ENV", "production")
 DEBUG_MODE = True if ENV_MODE == "development" else False
 
 # ==============================================================================
-# 1. ĐỊNH NGHĨA các CLASS featurer transformers 
+# 1. ĐỊNH NGHĨA CLASS
 # ==============================================================================
 
 class LogicalCleaner(BaseEstimator, TransformerMixin):
@@ -38,28 +35,23 @@ class LogicalCleaner(BaseEstimator, TransformerMixin):
     def transform(self, X):
         X_out = X.copy()
         
-        # --- 1. CLEAN SLEEP DURATION (Gom nhóm theo ý nghĩa) ---
+        # --- 1. CLEAN SLEEP DURATION ---
         if 'Sleep Duration' in X_out.columns:
             def clean_sleep(val):
                 s = str(val).lower().strip()
-                # Nhóm < 4 hours
                 if any(x in s for x in ['1-2', '2-3', '3-4',  '1-3']):
                     return 'Less than 4 hours'
-                # Nhóm 4-6 hours
                 elif any(x in s for x in ['less than 5','5-6', '4-6', '3-6','4-5','than 5']):
                     return '4-6 hours'
-                # Nhóm 7-8 hours (Chuẩn)
                 elif any(x in s for x in ['7-8', '6-8', '6-7', '8 hours', '9-5', '10-6']): 
                     return '7-8 hours'
-                # Nhóm > 8 hours
                 elif any(x in s for x in ['more than 8', '8-9', '9-11', '10-11']):
                     return 'More than 8 hours'
-                # Rác -> Unknown
                 else:
                     return 'Unknown'
             X_out['Sleep Duration'] = X_out['Sleep Duration'].apply(clean_sleep)
 
-        # --- 2. CLEAN DIETARY HABITS (Gom nhóm theo ý nghĩa) ---
+        # --- 2. CLEAN DIETARY HABITS ---
         if 'Dietary Habits' in X_out.columns:
             def clean_diet(val):
                 s = str(val).lower().strip()
@@ -69,11 +61,11 @@ class LogicalCleaner(BaseEstimator, TransformerMixin):
                     return 'Moderate'
                 elif s in ['unhealthy', 'less than healthy', 'no healthy', 'less healthy']:
                     return 'Unhealthy'
-                else: # Rác -> Unknown
+                else: 
                     return 'Unknown'
             X_out['Dietary Habits'] = X_out['Dietary Habits'].apply(clean_diet)
 
-        # --- 3. GỘP CỘT CHO MODEL ---
+        # --- 3. GỘP CỘT ---
         if 'Profession' in X_out.columns and 'Degree' in X_out.columns:
             X_out['Occupation'] = X_out['Profession'].fillna(X_out['Degree'])
             
@@ -103,12 +95,11 @@ class RareLabelEncoder(BaseEstimator, TransformerMixin):
         for col in self.variables:
             if col in X_out.columns:
                 valid_list = self.valid_labels_.get(col, [])
-                # Gom giá trị hiếm thành 'Other'
                 X_out[col] = np.where(X_out[col].isin(valid_list), X_out[col], 'Other')
         return X_out
 
 # ==============================================================================
-# 2. KHỞI TẠO
+# 2. KHỞI TẠO TÀI NGUYÊN (FIX LỖI GUNICORN TẠI ĐÂY)
 # ==============================================================================
 
 DATA_PATH = 'train.csv'
@@ -117,6 +108,12 @@ CONFIG_PATH = 'model_ui_config.json'
 
 system_bundle = None
 ui_config = None
+
+# --- [QUAN TRỌNG] FIX LỖI "Can't get attribute" KHI CHẠY TRÊN RENDER ---
+# Đoạn code này đánh lừa joblib rằng LogicalCleaner đang nằm ở __main__
+import __main__
+setattr(__main__, "LogicalCleaner", LogicalCleaner)
+setattr(__main__, "RareLabelEncoder", RareLabelEncoder)
 
 # --- LOAD MODEL ---
 if os.path.exists(MODEL_PATH):
@@ -140,18 +137,18 @@ def load_data():
     """Hàm load và làm sạch sơ bộ dữ liệu cho Dashboard"""
     if not os.path.exists(DATA_PATH): return pd.DataFrame()
     df = pd.read_csv(DATA_PATH)
-
-    # 1. Áp dụng LogicalCleaner (Xử lý chuỗi Sleep/Diet, tạo cột gộp)
+    
     cleaner = LogicalCleaner()
     df = cleaner.transform(df)
-    # 2. Áp dụng Rare Label Removal (Thủ công cho Dashboard để chart gọn)
+
     vars_to_clean = ['Degree', 'Profession', 'City', 'Dietary Habits', 'Sleep Duration']
+    
     for col in vars_to_clean:
         if col in df.columns:
             counts = df[col].value_counts()
             valid_values = counts[counts > 5].index
             df[col] = np.where(df[col].isin(valid_values), df[col], 'Other')
-    # 3. Convert numeric columns
+
     cols = ['Work/Study Hours', 'CGPA', 'Work Pressure', 'Academic Pressure', 
             'Job Satisfaction', 'Study Satisfaction', 'Financial Stress', 'Age', 'Depression']
     for c in cols:
@@ -161,7 +158,7 @@ def load_data():
     return df
 
 # ==============================================================================
-# 3. ROUTES Trang chủ & Giao diện
+# 3. ROUTES CƠ BẢN
 # ==============================================================================
 @app.route('/')
 def home():
@@ -209,7 +206,6 @@ def predict():
         data = request.json
         input_df = pd.DataFrame([data])
 
-        # --- 1. Xử lý gộp student và professional ---
         status = data.get('Working Professional or Student')
         if status == 'Student':
             input_df['Work Pressure'] = np.nan
@@ -221,13 +217,11 @@ def predict():
             input_df['Degree'] = np.nan
             input_df['CGPA'] = np.nan
         
-        # --- 2. Convert kiểu dữ liệu ---
         numeric_cols = ['Age', 'Work/Study Hours', 'Financial Stress', 'CGPA', 'Work Pressure', 'Academic Pressure', 'Job Satisfaction', 'Study Satisfaction']
         for col in numeric_cols:
             if col in input_df.columns:
                 input_df[col] = pd.to_numeric(input_df[col], errors='coerce')
 
-        # --- 3. CHẠY PIPELINE ---
         cleaner = system_bundle['selector_pipeline']
         X_clean = cleaner.transform(input_df)
         
@@ -413,5 +407,4 @@ def get_custom_dashboard():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    # Chạy server với biến môi trường PORT
     app.run(host='0.0.0.0', port=PORT, debug=DEBUG_MODE)
