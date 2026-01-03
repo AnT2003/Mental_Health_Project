@@ -218,12 +218,23 @@ def home():
     data_sample = df.head(500).to_dict(orient='records')
     column_names = df.columns.tolist()
     
+    # --- [KHÔI PHỤC] Logic tính thống kê mô tả ---
+    desc_df = df.describe().reset_index()
+    desc_data = desc_df.to_dict(orient='records')
+    desc_columns = desc_df.columns.tolist()
+
     stats = {
         'avg_age': round(df['Age'].mean(), 1),
         'avg_cgpa': round(df['CGPA'].mean(), 2),
         'depression_rate': round((df['Depression'].sum() / len(df)) * 100, 1)
     }
-    return render_template('index.html', data_sample=data_sample, stats=stats, column_names=column_names)
+    # Truyền thêm desc_data và desc_columns vào template
+    return render_template('index.html', 
+                           data_sample=data_sample, 
+                           stats=stats, 
+                           column_names=column_names, 
+                           desc_data=desc_data, 
+                           desc_columns=desc_columns)
 
 @app.route('/api/model-config', methods=['GET'])
 def get_model_config():
