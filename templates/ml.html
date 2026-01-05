@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Prediction | Mental Health Analytics</title>
+    <title>Predictive Model | Mental Health Analytics</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    
     <style>
+        /* GIỮ NGUYÊN CSS BODY VÀ FORM CỦA TRANG ML */
         body { font-family: 'Inter', sans-serif; background: #f8fafc; }
         .fade-in { animation: fadeIn 0.5s ease-in; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -20,27 +22,48 @@
             background-size: 0.65em auto;
         }
 
-        /* Navbar Style (Compact & Professional) */
-        .glass-nav { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(229, 231, 235, 0.5); z-index: 50; }
-        .nav-link { color: #4b5563; transition: all 0.3s; font-size: 0.8rem; }
-        .nav-link:hover, .nav-link.active { color: #2563eb; font-weight: 700; }
+        /* --- NAVBAR STYLES (COPY CHÍNH XÁC TỪ CODE MẪU) --- */
+        .glass-nav { 
+            background: rgba(255, 255, 255, 0.95); 
+            backdrop-filter: blur(10px); 
+            border-bottom: 1px solid rgba(229, 231, 235, 0.5); 
+            font-family: 'Inter', sans-serif; 
+            z-index: 200; 
+        }
+        .nav-link { 
+            color: #4b5563; 
+            transition: all 0.3s; 
+            font-size: 0.8rem; 
+            font-weight: 600; 
+            letter-spacing: 0.04em;
+            text-decoration: none;
+        }
+        .nav-link:hover, .nav-link.active { 
+            color: #2563eb; 
+            font-weight: 700; 
+        }
     </style>
 </head>
 <body>
 
-    <nav class="glass-nav fixed w-full top-0 px-6 py-3 shadow-sm">
-        <div class="max-w-6xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-2">
+    <nav class="glass-nav fixed w-full z-50 top-0 px-6 py-3 h-16 flex items-center">
+        <div class="w-full flex justify-between items-center">
+            <div class="flex items-center gap-3">
                 <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-md">
                     <i class="fas fa-brain text-sm"></i>
                 </div>
                 <span class="text-lg font-bold text-blue-700 font-black tracking-tight">Mental Health Analytics</span>
             </div>
-            <div class="hidden md:flex space-x-6 font-semibold uppercase tracking-wide">
+
+            <div class="hidden md:flex space-x-6">
                 <a href="/" class="nav-link">Overview</a>
                 <a href="/dashboard" class="nav-link">Dashboard</a>
-                <a href="/ml" class="nav-link active border-b-2 border-blue-600 pb-1">AI Predict</a>
-                <a href="/logout" class="nav-link text-rose-500 hover:text-rose-700 ml-4 normal-case"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                
+                <a href="/ml" class="nav-link active border-b-2 border-blue-600 pb-1">Prediction</a>
+                
+                <a href="/logout" class="ml-4 px-2 py-1 text-xs font-semibold text-rose-600 hover:text-rose-700 border rounded-lg flex items-center gap-1 nav-link" style="font-weight: 600;">
+                    <i class="fas fa-sign-out-alt text-[10px]"></i> Logout
+                </a>
             </div>
         </div>
     </nav>

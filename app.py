@@ -237,22 +237,39 @@ def load_data_dashboard():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # 1. Xử lý logic khi người dùng bấm nút Submit (POST)
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        
         if username in USERS and USERS[username] == password:
             user = User(username)
             login_user(user)
-            return redirect(url_for('dashboard'))
+            
+            # --- LOGIC GIỮ NGUYÊN TRANG ĐANG ĐỨNG ---
+            # Lấy tham số 'next' từ URL (do frontend gửi lên)
+            next_page = request.args.get('next')
+            
+            # Kiểm tra bảo mật: 
+            # 1. next_page phải tồn tại
+            # 2. next_page phải bắt đầu bằng '/' (để tránh lỗi redirect sang web khác)
+            # 3. next_page không được là trang login (tránh vòng lặp)
+            if not next_page or not next_page.startswith('/') or next_page == '/login':
+                next_page = url_for('home') # Mặc định về trang chủ (Index)
+            
+            return redirect(next_page)
         else:
             flash('Invalid username or password!')
+
+    # 2. Xử lý khi người dùng mới vào trang Login (GET)
+    # Nếu URL có dạng /login?next=/ml -> form action sẽ tự động giữ lại tham số next này
     return render_template('login.html')
 
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for('login'))
+    return redirect(url_for('home'))
 
 # ==============================================================================
 # 4. ROUTES CƠ BẢN (PUBLIC)
@@ -438,10 +455,7 @@ def get_custom_dashboard():
         
         age_labels_sparse = []
         for age in age_groups.index:
-            if age >= 18 and (age - 18) % 3 == 0:
-                age_labels_sparse.append(str(age))
-            else:
-                age_labels_sparse.append("")
+            age_labels_sparse.append(str(age))
         for c in [0, 1]: 
             if c not in age_groups.columns: age_groups[c] = 0
 
@@ -456,18 +470,31 @@ def get_custom_dashboard():
         acad_rates = [round(df_global[df_global['Academic Pressure'] == l]['Depression'].mean() * 100, 1) if not df_global[df_global['Academic Pressure'] == l].empty else 0 for l in levels]
 
         def get_ranked_tree(group_col, press_col, sat_col):
-            if group_col not in df_global.columns: return []
+            if group_col not in df_global.columns:
+                return []
             counts = df_global[group_col].value_counts()
             valid = counts[counts >= 5].index
             df_v = df_global[df_global[group_col].isin(valid)]
-            if df_v.empty: return []
-            if press_col not in df_v.columns or sat_col not in df_v.columns: return []
-            top = df_v.groupby(group_col)[press_col].mean().sort_values(ascending=False).head(5)
+            if df_v.empty:
+                return []
+            if press_col not in df_v.columns or sat_col not in df_v.columns:
+                return []
+            # Tính trung bình cả pressure và satisfaction
+            agg = (
+                df_v.groupby(group_col)[[press_col, sat_col]]
+                    .mean()
+                    .sort_values(
+                        by=[press_col, sat_col],
+                        ascending=[False, True]    # 1) pressure ↓, 2) satisfaction ↑
+                    )
+                    .head(5)
+            )
             res = []
-            for name, p in top.items():
-                s = df_v[df_v[group_col] == name][sat_col].mean()
-                res.append({'category': str(name), 'type': 'Áp Lực', 'value': round(p, 2)})
-                res.append({'category': str(name), 'type': 'Hài Lòng', 'value': round(s, 2)})
+            for name, row in agg.iterrows():
+                p = row[press_col]
+                s = row[sat_col]
+                res.append({'category': str(name), 'type': 'Pressure', 'value': round(p, 2)})
+                res.append({'category': str(name), 'type': 'Satisfaction', 'value': round(s, 2)})
             return res
 
         sleep_stats = pd.DataFrame()
