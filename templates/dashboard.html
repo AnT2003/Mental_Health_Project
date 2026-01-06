@@ -233,7 +233,15 @@
                 </select>
             </div>
 
-            <select id="fDepression" style="display:none;"><option value=""></option></select>
+            <div class="filter-group">
+                <label class="filter-label">Depression</label>
+                <select id="fDepression" class="filter-control">
+                    <option value="">All</option>
+                    <option value="0">Non-Depressed</option>
+                    <option value="1">Depressed</option>
+                </select>
+            </div>
+
 
             <div class="mt-6 space-y-2">
                 <button onclick="init()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg transition shadow flex items-center justify-center gap-2 text-sm">
@@ -267,7 +275,7 @@
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
                 <div class="card lg:col-span-2">
-                    <h3 class="card-title"><i class="fas fa-braille"></i> Study Hours vs GPA by Depression</h3>
+                    <h3 class="card-title"><i class="fas fa-braille"></i> Study Hours vs GPA by Academic Pressure</h3>
                     <div class="chart-box"><canvas id="scatterStudent"></canvas></div>
                 </div>
                 <div class="card">

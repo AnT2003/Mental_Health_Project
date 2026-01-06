@@ -2,6 +2,32 @@
     "model_threshold": 0.7593766450881958,
     "input_fields": [
         {
+            "name": "Have you ever had suicidal thoughts ?",
+            "label": "Have You Ever Had Suicidal Thoughts ?",
+            "type": "select",
+            "options": [
+                "No",
+                "Yes"
+            ]
+        },
+        {
+            "name": "Work/Study Hours",
+            "label": "Work/Study Hours",
+            "type": "number",
+            "min": 0.0,
+            "max": 12.0
+        },
+        {
+            "name": "Dietary Habits",
+            "label": "Dietary Habits",
+            "type": "select",
+            "options": [
+                "Healthy",
+                "Moderate",
+                "Unhealthy"
+            ]
+        },
+        {
             "name": "Degree",
             "label": "Degree",
             "type": "select",
@@ -37,26 +63,8 @@
             ]
         },
         {
-            "name": "Have you ever had suicidal thoughts ?",
-            "label": "Have You Ever Had Suicidal Thoughts ?",
-            "type": "select",
-            "options": [
-                "No",
-                "Yes"
-            ]
-        },
-        {
-            "name": "Gender",
-            "label": "Gender",
-            "type": "select",
-            "options": [
-                "Female",
-                "Male"
-            ]
-        },
-        {
-            "name": "Academic Pressure",
-            "label": "Academic Pressure",
+            "name": "Job Satisfaction",
+            "label": "Job Satisfaction",
             "type": "select",
             "options": [
                 "1.0",
@@ -77,6 +85,25 @@
                 "4.0",
                 "5.0"
             ]
+        },
+        {
+            "name": "Academic Pressure",
+            "label": "Academic Pressure",
+            "type": "select",
+            "options": [
+                "1.0",
+                "2.0",
+                "3.0",
+                "4.0",
+                "5.0"
+            ]
+        },
+        {
+            "name": "CGPA",
+            "label": "Cgpa",
+            "type": "number",
+            "min": 5.03,
+            "max": 10.0
         },
         {
             "name": "Age",
@@ -110,13 +137,12 @@
             ]
         },
         {
-            "name": "Dietary Habits",
-            "label": "Dietary Habits",
+            "name": "Gender",
+            "label": "Gender",
             "type": "select",
             "options": [
-                "Healthy",
-                "Moderate",
-                "Unhealthy"
+                "Female",
+                "Male"
             ]
         },
         {
@@ -162,32 +188,6 @@
                 "UX/UI Designer",
                 "Other"
             ]
-        },
-        {
-            "name": "Work/Study Hours",
-            "label": "Work/Study Hours",
-            "type": "number",
-            "min": 0.0,
-            "max": 12.0
-        },
-        {
-            "name": "Job Satisfaction",
-            "label": "Job Satisfaction",
-            "type": "select",
-            "options": [
-                "1.0",
-                "2.0",
-                "3.0",
-                "4.0",
-                "5.0"
-            ]
-        },
-        {
-            "name": "CGPA",
-            "label": "Cgpa",
-            "type": "number",
-            "min": 5.03,
-            "max": 10.0
         }
     ]
 }

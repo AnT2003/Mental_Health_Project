@@ -29,7 +29,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Cấu hình Secret Key
-app.secret_key = os.getenv("SECRET_KEY", "default-dev-key-do-not-use-in-prod")
+app.secret_key = os.getenv("SECRET_KEY")
 PORT = int(os.getenv("PORT", 10000))
 ENV_MODE = os.getenv("FLASK_ENV", "production")
 DEBUG_MODE = True if ENV_MODE == "development" else False
@@ -40,8 +40,8 @@ login_manager.init_app(app)
 login_manager.login_view = 'login' # Chưa đăng nhập sẽ bị đá về đây
 
 # --- LẤY TÀI KHOẢN TỪ BIẾN MÔI TRƯỜNG ---
-SYS_USER = os.getenv("ADMIN_USERNAME", "admin")
-SYS_PASS = os.getenv("ADMIN_PASSWORD", "admin123")
+SYS_USER = os.getenv("ADMIN_USERNAME")
+SYS_PASS = os.getenv("ADMIN_PASSWORD")
 
 USERS = {
     SYS_USER: SYS_PASS
@@ -149,56 +149,13 @@ try:
 except:
     pass
 
-# --- HÀM TỰ ĐỘNG TRAIN LẠI NẾU FILE MODEL CŨ BỊ LỖI (BẮT BUỘC PHẢI CÓ) ---
-# (Nếu không có hàm này, khi load model bị lỗi class, server sẽ sập ngay)
-def retrain_model_on_server():
-    print(">>> ⚠️ MODEL LOAD FAILED. STARTING EMERGENCY RETRAINING...")
-    try:
-        if not os.path.exists(DATA_PATH): raise Exception("Train.csv not found!")
-        df = pd.read_csv(DATA_PATH)
-        for c in ['id', 'Name', 'PassengerId']:
-            if c in df.columns: df.drop(c, axis=1, inplace=True)
-        X = df.drop('Depression', axis=1); y = df['Depression']
-        
-        vars_to_rare = ['Occupation', 'Degree', 'Profession', 'City']
-        pre_cleaner = Pipeline([('cleaner', LogicalCleaner()), ('rare_encoder', RareLabelEncoder(variables=vars_to_rare, threshold=5))])
-        
-        X_pre = pre_cleaner.fit_transform(X, y)
-        final_features = X_pre.columns.tolist()
-        
-        cat_cols = X_pre.select_dtypes(include=['object', 'category']).columns.tolist()
-        num_cols = X_pre.select_dtypes(exclude=['object', 'category']).columns.tolist()
-        
-        num_pipe = Pipeline([('imputer', SimpleImputer(strategy='median')), ('scaler', StandardScaler())])
-        cat_pipe = Pipeline([('imputer', SimpleImputer(strategy='constant', fill_value='Other')), ('target_enc', TargetEncoder(smooth='auto')), ('scaler', StandardScaler())])
-        
-        final_preprocessor = ColumnTransformer(transformers=[('num', num_pipe, num_cols), ('cat', cat_pipe, cat_cols)], verbose_feature_names_out=False)
-        
-        scale_pos_weight = (y == 0).sum() / (y == 1).sum()
-        model = xgb.XGBClassifier(n_estimators=100, max_depth=4, scale_pos_weight=scale_pos_weight, n_jobs=1)
-        
-        X_processed = final_preprocessor.fit_transform(X_pre, y)
-        model.fit(X_processed, y)
-        
-        pre_cleaner.named_steps['rare_encoder'].valid_labels_ = pre_cleaner.named_steps['rare_encoder'].valid_labels_
-        
-        new_bundle = {'selector_pipeline': pre_cleaner, 'preprocessor': final_preprocessor, 'model': model, 'threshold': 0.45, 'required_features': final_features}
-        joblib.dump(new_bundle, MODEL_PATH)
-        print(">>> ✅ EMERGENCY RETRAINING SUCCESSFUL."); return new_bundle
-    except Exception as e:
-        print(f"!!! RETRAINING FAILED: {str(e)}"); traceback.print_exc(); return None
-
 # --- LOAD MODEL ---
 if os.path.exists(MODEL_PATH):
     try:
         system_bundle = joblib.load(MODEL_PATH)
         print(f">>> MODEL LOADED SUCCESSFULLY: {MODEL_PATH}")
     except Exception as e:
-        print(f"!!! LOAD ERROR: {e}. Attempting retrain...")
-        system_bundle = retrain_model_on_server()
-else:
-    print(">>> Model not found. Training new one...")
-    system_bundle = retrain_model_on_server()
+        print(f"!!! LOAD ERROR: {e}. Attempting retrain model...")
 
 # --- LOAD UI CONFIG ---
 if os.path.exists(CONFIG_PATH):
@@ -212,12 +169,9 @@ def load_data_dashboard():
     """Hàm load và làm sạch sơ bộ dữ liệu cho Dashboard"""
     if not os.path.exists(DATA_PATH): return pd.DataFrame()
     df = pd.read_csv(DATA_PATH)
-    
     cleaner = LogicalCleaner()
     df = cleaner.transform(df)
-
     vars_to_clean = ['Degree', 'Profession', 'City', 'Dietary Habits', 'Sleep Duration']
-    
     for col in vars_to_clean:
         if col in df.columns:
             counts = df[col].value_counts()
@@ -228,7 +182,6 @@ def load_data_dashboard():
             'Job Satisfaction', 'Study Satisfaction', 'Financial Stress', 'Age', 'Depression']
     for c in cols:
         if c in df.columns: df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
-            
     return df
 
 # ==============================================================================
@@ -272,7 +225,7 @@ def logout():
     return redirect(url_for('home'))
 
 # ==============================================================================
-# 4. ROUTES CƠ BẢN (PUBLIC)
+# 4. ROUTES CƠ BẢN 
 # ==============================================================================
 @app.route('/')
 def home():
@@ -281,8 +234,6 @@ def home():
     
     data_sample = df.head(500).to_dict(orient='records')
     column_names = df.columns.tolist()
-    
-    # --- [ĐÃ KHÔI PHỤC] Logic tính thống kê mô tả ---
     desc_df = df.describe().reset_index()
     desc_data = desc_df.to_dict(orient='records')
     desc_columns = desc_df.columns.tolist()
@@ -320,7 +271,7 @@ def ml_page():
     return render_template('ml.html')
 
 @app.route('/api/predict', methods=['POST'])
-@login_required  # <--- API BẢO MẬT
+@login_required  # <--- BẮT BUỘC ĐĂNG NHẬP
 def predict():
     if not system_bundle:
         return jsonify({'error': 'Model chưa sẵn sàng.'}), 500
@@ -394,22 +345,25 @@ def get_custom_dashboard():
         df = load_data_dashboard()
         if df.empty: return jsonify({})
 
+        # Lấy các tham số filter từ request
         f_status = request.args.get('status')
         f_gender = request.args.get('gender')
         f_age_min = request.args.get('ageMin')
         f_age_max = request.args.get('ageMax')
         f_history = request.args.get('history')
         f_suicide = request.args.get('suicide')
-        f_depression = request.args.get('depression')
+        f_depression = request.args.get('depression') 
         f_degree = request.args.get('degree')
         f_profession = request.args.get('profession')
-
+        # Áp dụng các filter
         if f_status: df = df[df['Working Professional or Student'] == f_status]
         if f_gender: df = df[df['Gender'] == f_gender]
         if f_age_min and f_age_max: df = df[(df['Age'] >= int(f_age_min)) & (df['Age'] <= int(f_age_max))]
         if f_history: df = df[df['Family History of Mental Illness'] == f_history]
         if f_suicide: df = df[df['Have you ever had suicidal thoughts ?'] == f_suicide]
-        if f_depression: df = df[df['Depression'] == int(f_depression)]
+        if f_depression: 
+            if f_depression in ['0', '1']:
+                df = df[df['Depression'] == int(f_depression)]
         if f_degree:
             degree_list = [x.strip() for x in f_degree.split(',') if x.strip()]
             if degree_list: df = df[df['Degree'].isin(degree_list)]
