@@ -1,97 +1,6 @@
 {
-    "model_threshold": 0.7662346959114075,
+    "model_threshold": 0.7593766450881958,
     "input_fields": [
-        {
-            "name": "Job Satisfaction",
-            "label": "Job Satisfaction",
-            "type": "select",
-            "options": [
-                "1.0",
-                "2.0",
-                "3.0",
-                "4.0",
-                "5.0"
-            ]
-        },
-        {
-            "name": "Sleep Duration",
-            "label": "Sleep Duration",
-            "type": "select",
-            "options": [
-                "4-5 hours",
-                "5-6 hours",
-                "6-8 hours",
-                "Less than 4 hours",
-                "More than 8 hours"
-            ]
-        },
-        {
-            "name": "Family History of Mental Illness",
-            "label": "Family History Of Mental Illness",
-            "type": "select",
-            "options": [
-                "No",
-                "Yes"
-            ]
-        },
-        {
-            "name": "City",
-            "label": "City",
-            "type": "select",
-            "options": [
-                "Agra",
-                "Ahmedabad",
-                "Bangalore",
-                "Bhopal",
-                "Chennai",
-                "Delhi",
-                "Faridabad",
-                "Ghaziabad",
-                "Hyderabad",
-                "Indore",
-                "Jaipur",
-                "Kalyan",
-                "Kanpur",
-                "Kolkata",
-                "Lucknow",
-                "Ludhiana",
-                "Meerut",
-                "Mumbai",
-                "Nagpur",
-                "Nashik",
-                "Patna",
-                "Pune",
-                "Rajkot",
-                "Srinagar",
-                "Surat",
-                "Thane",
-                "Vadodara",
-                "Varanasi",
-                "Vasai-Virar",
-                "Visakhapatnam"
-            ]
-        },
-        {
-            "name": "Financial Stress",
-            "label": "Financial Stress",
-            "type": "select",
-            "options": [
-                "1.0",
-                "2.0",
-                "3.0",
-                "4.0",
-                "5.0"
-            ]
-        },
-        {
-            "name": "Gender",
-            "label": "Gender",
-            "type": "select",
-            "options": [
-                "Female",
-                "Male"
-            ]
-        },
         {
             "name": "Degree",
             "label": "Degree",
@@ -128,8 +37,57 @@
             ]
         },
         {
+            "name": "Have you ever had suicidal thoughts ?",
+            "label": "Have You Ever Had Suicidal Thoughts ?",
+            "type": "select",
+            "options": [
+                "No",
+                "Yes"
+            ]
+        },
+        {
+            "name": "Gender",
+            "label": "Gender",
+            "type": "select",
+            "options": [
+                "Female",
+                "Male"
+            ]
+        },
+        {
             "name": "Academic Pressure",
             "label": "Academic Pressure",
+            "type": "select",
+            "options": [
+                "1.0",
+                "2.0",
+                "3.0",
+                "4.0",
+                "5.0"
+            ]
+        },
+        {
+            "name": "Financial Stress",
+            "label": "Financial Stress",
+            "type": "select",
+            "options": [
+                "1.0",
+                "2.0",
+                "3.0",
+                "4.0",
+                "5.0"
+            ]
+        },
+        {
+            "name": "Age",
+            "label": "Age",
+            "type": "number",
+            "min": 18.0,
+            "max": 60.0
+        },
+        {
+            "name": "Study Satisfaction",
+            "label": "Study Satisfaction",
             "type": "select",
             "options": [
                 "1.0",
@@ -152,13 +110,6 @@
             ]
         },
         {
-            "name": "CGPA",
-            "label": "Cgpa",
-            "type": "number",
-            "min": 5.03,
-            "max": 10.0
-        },
-        {
             "name": "Dietary Habits",
             "label": "Dietary Habits",
             "type": "select",
@@ -166,27 +117,6 @@
                 "Healthy",
                 "Moderate",
                 "Unhealthy"
-            ]
-        },
-        {
-            "name": "Study Satisfaction",
-            "label": "Study Satisfaction",
-            "type": "select",
-            "options": [
-                "1.0",
-                "2.0",
-                "3.0",
-                "4.0",
-                "5.0"
-            ]
-        },
-        {
-            "name": "Have you ever had suicidal thoughts ?",
-            "label": "Have You Ever Had Suicidal Thoughts ?",
-            "type": "select",
-            "options": [
-                "No",
-                "Yes"
             ]
         },
         {
@@ -241,11 +171,23 @@
             "max": 12.0
         },
         {
-            "name": "Age",
-            "label": "Age",
+            "name": "Job Satisfaction",
+            "label": "Job Satisfaction",
+            "type": "select",
+            "options": [
+                "1.0",
+                "2.0",
+                "3.0",
+                "4.0",
+                "5.0"
+            ]
+        },
+        {
+            "name": "CGPA",
+            "label": "Cgpa",
             "type": "number",
-            "min": 18.0,
-            "max": 60.0
+            "min": 5.03,
+            "max": 10.0
         }
     ]
 }
