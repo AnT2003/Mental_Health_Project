@@ -478,13 +478,13 @@ def get_custom_dashboard():
             'pie_status': {'labels': safe_str_list(status_stats.index), 'data': safe_int_list(status_stats)},
             'hist_age': {'labels': age_labels_sparse, 'normal': safe_int_list(age_groups[0]), 'depressed': safe_int_list(age_groups[1])},
             'scatter': scatter_data,
-            'comparison_pressure': {'labels': [f'Mức {i}' for i in levels], 'work': work_rates, 'academic': acad_rates},
+            'comparison_pressure': {'labels': [f'Level {i}' for i in levels], 'work': work_rates, 'academic': acad_rates},
             'tree_prof': get_ranked_tree('Profession', 'Work Pressure', 'Job Satisfaction'),
             'tree_degree': get_ranked_tree('Degree', 'Academic Pressure', 'Study Satisfaction'),
             'col_suicide': {'labels': safe_str_list(status_stats.index), 'normal': safe_int_list(df_global[df_global['Depression']==0]['Working Professional or Student'].value_counts().reindex(status_stats.index)), 'depressed': safe_int_list(df_global[df_global['Depression']==1]['Working Professional or Student'].value_counts().reindex(status_stats.index))},
             'bar_diet': {'labels': safe_str_list(diet_pct.index) if not diet_pct.empty else [], 'normal': diet_pct[0].round(1).tolist() if not diet_pct.empty else [], 'depressed': diet_pct[1].round(1).tolist() if not diet_pct.empty else []},
             'area_sleep': {'labels': safe_str_list(sleep_stats.index) if not sleep_stats.empty else [], 'normal': safe_int_list(sleep_stats[0]) if not sleep_stats.empty else [], 'depressed': safe_int_list(sleep_stats[1]) if not sleep_stats.empty else []},
-            'area_finance': {'labels': [f"Mức {i}" for i in stress_lvls], 'total': safe_int_list(fin_tot), 'depressed': safe_int_list(fin_dep), 'suicide': safe_int_list(fin_sui)}
+            'area_finance': {'labels': [f"Level {i}" for i in stress_lvls], 'total': safe_int_list(fin_tot), 'depressed': safe_int_list(fin_dep), 'suicide': safe_int_list(fin_sui)}
         })
 
     except Exception as e:
@@ -492,4 +492,5 @@ def get_custom_dashboard():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
+
     app.run(host='0.0.0.0', port=PORT, debug=DEBUG_MODE)
