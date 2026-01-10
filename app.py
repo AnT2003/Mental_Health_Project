@@ -419,7 +419,7 @@ def get_custom_dashboard():
             sample_student = df_student.sample(n=min(300, len(df_student)))
             scatter_data = [{'x': safe_float(r['Work/Study Hours']), 'y': safe_float(r['CGPA']), 'r': safe_float(r['Academic Pressure'])*2} for _, r in sample_student.iterrows()]
 
-        levels = [0, 1, 2, 3, 4, 5]
+        levels = [1, 2, 3, 4, 5]
         work_rates = [round(df_global[df_global['Work Pressure'] == l]['Depression'].mean() * 100, 1) if not df_global[df_global['Work Pressure'] == l].empty else 0 for l in levels]
         acad_rates = [round(df_global[df_global['Academic Pressure'] == l]['Depression'].mean() * 100, 1) if not df_global[df_global['Academic Pressure'] == l].empty else 0 for l in levels]
 
@@ -494,3 +494,4 @@ def get_custom_dashboard():
 if __name__ == '__main__':
 
     app.run(host='0.0.0.0', port=PORT, debug=DEBUG_MODE)
+
